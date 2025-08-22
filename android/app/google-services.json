@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "182060521964",
+    "project_id": "nutriplanner-a7c33",
+    "storage_bucket": "nutriplanner-a7c33.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182060521964:android:120e7643f6b3c3037c08c9",
+        "android_client_info": {
+          "package_name": "com.example.nutriplan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeFwUIP5Y1vbF0vAxa01A1-n1lVj2n63U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
