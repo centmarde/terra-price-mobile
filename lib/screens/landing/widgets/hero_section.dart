@@ -16,36 +16,18 @@ class HeroSection extends StatelessWidget {
           children: [
             // App logo/icon
             Container(
-              width: 100.w,
-              height: 100.w,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(20.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Icon(Icons.terrain, size: 50.w, color: Colors.white),
-            ),
+              width: 200.w,
+              height: 160.h,
 
-            SizedBox(height: 24.h),
-
-            // App name
-            Text(
-              'TerraPrice',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+              child: ClipRRect(
+                child: Image.asset(
+                  'lib/assets/logo.png',
+                  width: 200.w,
+                  height: 160.h,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-
-            SizedBox(height: 8.h),
 
             // App description
             Text(
