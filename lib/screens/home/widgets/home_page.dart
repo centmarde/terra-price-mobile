@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16.w,
                 mainAxisSpacing: 16.h,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.1, // Reduced from 1.2 to give more height
                 children: [
                   _buildActionCard(
                     context,
