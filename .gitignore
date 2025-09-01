@@ -47,3 +47,4 @@ app.*.map.json
 #workflow
 .github
 .vscode
+.env
