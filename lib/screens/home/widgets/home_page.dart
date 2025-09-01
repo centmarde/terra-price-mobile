@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart'; // Add this import
+import 'dart:io'; // Add this import
 import '../../landing/providers/auth_provider.dart';
 
 /// Home page widget - main dashboard for authenticated users
@@ -12,8 +14,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<String> _selectedImagePaths = [];
+  List<File> _selectedImages = []; // Changed to File list
   bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker(); // Add image picker instance
 
   @override
   Widget build(BuildContext context) {
@@ -84,28 +87,28 @@ class _HomePageState extends State<HomePage> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16.w,
                 mainAxisSpacing: 16.h,
-                childAspectRatio: 1.1, // Reduced from 1.2 to give more height
+                childAspectRatio: 1.1,
                 children: [
                   _buildActionCard(
                     context,
                     icon: Icons.camera_alt_outlined,
                     title: 'Take Photo',
-                    subtitle: 'Camera not available',
-                    onTap: () => _showCameraNotAvailable(),
+                    subtitle: 'Capture with camera',
+                    onTap: () => _pickImageFromCamera(),
                   ),
                   _buildActionCard(
                     context,
                     icon: Icons.photo_library_outlined,
                     title: 'Select Images',
-                    subtitle: 'Choose from device',
-                    onTap: () => _showImagePicker(),
+                    subtitle: 'Choose from gallery',
+                    onTap: () => _showImageSelectionOptions(),
                   ),
                   _buildActionCard(
                     context,
                     icon: Icons.add_photo_alternate_outlined,
                     title: 'Add More',
                     subtitle: 'Select additional images',
-                    onTap: () => _showImagePicker(),
+                    onTap: () => _showImageSelectionOptions(),
                   ),
                   _buildActionCard(
                     context,
@@ -117,10 +120,10 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
 
-              if (_selectedImagePaths.isNotEmpty) ...[
+              if (_selectedImages.isNotEmpty) ...[
                 SizedBox(height: 32.h),
                 Text(
-                  'Selected Images (${_selectedImagePaths.length})',
+                  'Selected Images (${_selectedImages.length})',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -233,7 +236,7 @@ class _HomePageState extends State<HomePage> {
       height: 120.h,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _selectedImagePaths.length,
+        itemCount: _selectedImages.length,
         itemBuilder: (context, index) {
           return Container(
             width: 120.w,
@@ -246,24 +249,35 @@ class _HomePageState extends State<HomePage> {
                     width: 120.w,
                     height: 120.h,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
                       borderRadius: BorderRadius.circular(8.r),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_outlined,
-                          size: 40.w,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          'Image ${index + 1}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                    child: Image.file(
+                      _selectedImages[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image_outlined,
+                                size: 40.w,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Image ${index + 1}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -315,67 +329,168 @@ class _HomePageState extends State<HomePage> {
                 ],
               )
             : Text(
-                'Upload ${_selectedImagePaths.length} Image${_selectedImagePaths.length > 1 ? 's' : ''}',
+                'Upload ${_selectedImages.length} Image${_selectedImages.length > 1 ? 's' : ''}',
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
               ),
       ),
     );
   }
 
-  void _showImagePicker() {
-    // Simulate image selection
-    showDialog(
+  // New method to pick image from camera
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImages.add(File(image.path));
+        });
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to take photo: $e');
+    }
+  }
+
+  // Method to pick images from gallery
+  Future<void> _pickImagesFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImages.add(File(image.path));
+        });
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to select image: $e');
+    }
+  }
+
+  // Method to show image selection options
+  void _showImageSelectionOptions() {
+    showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Images'),
-          content: const Text(
-            'This would open your device\'s image picker. For now, we\'ll simulate adding images.',
+        return Container(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Select Images',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16.h),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pick Single Image'),
+                subtitle: const Text('Select one image from gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImagesFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.add_photo_alternate),
+                title: const Text('Pick Multiple Images'),
+                subtitle: const Text('Select one image at a time'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickMultipleImages();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                subtitle: const Text('Use camera to take a photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromCamera();
+                },
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _simulateImageSelection();
-              },
-              child: const Text('Add Mock Images'),
-            ),
-          ],
         );
       },
     );
   }
 
-  void _simulateImageSelection() {
-    setState(() {
-      _selectedImagePaths.addAll([
-        'floorplan_${DateTime.now().millisecondsSinceEpoch}_1.jpg',
-        'floorplan_${DateTime.now().millisecondsSinceEpoch}_2.jpg',
-      ]);
-    });
-  }
+  // Method to pick multiple images (one by one)
+  Future<void> _pickMultipleImages() async {
+    int count = 0;
+    const maxImages = 5; // Limit to prevent too many selections
 
-  void _showCameraNotAvailable() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Camera functionality requires image_picker package'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    while (count < maxImages) {
+      try {
+        final XFile? image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1800,
+          maxHeight: 1800,
+          imageQuality: 85,
+        );
+
+        if (image != null) {
+          setState(() {
+            _selectedImages.add(File(image.path));
+          });
+          count++;
+
+          // Ask if user wants to add more
+          if (count < maxImages) {
+            final bool? addMore = await showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Add More Images?'),
+                  content: Text(
+                    'You have selected $count image${count > 1 ? 's' : ''}. Would you like to add more?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Done'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Add More'),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (addMore != true) break;
+          }
+        } else {
+          break; // User cancelled selection
+        }
+      } catch (e) {
+        _showErrorSnackBar('Failed to select image: $e');
+        break;
+      }
+    }
   }
 
   void _removeImage(int index) {
     setState(() {
-      _selectedImagePaths.removeAt(index);
+      _selectedImages.removeAt(index);
     });
   }
 
   Future<void> _uploadImages() async {
-    if (_selectedImagePaths.isEmpty) return;
+    if (_selectedImages.isEmpty) return;
 
     setState(() {
       _isUploading = true;
@@ -388,7 +503,7 @@ class _HomePageState extends State<HomePage> {
 
       // Clear selected images after successful upload
       setState(() {
-        _selectedImagePaths.clear();
+        _selectedImages.clear();
         _isUploading = false;
       });
 
@@ -425,21 +540,21 @@ class _HomePageState extends State<HomePage> {
               ),
               SizedBox(height: 16.h),
               ListTile(
-                leading: const Icon(Icons.info_outline),
+                leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
-                subtitle: const Text('Requires image_picker package'),
+                subtitle: const Text('Take a photo'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showCameraNotAvailable();
+                  _pickImageFromCamera();
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: const Text('Select Images'),
-                subtitle: const Text('Simulate image selection'),
+                title: const Text('Gallery'),
+                subtitle: const Text('Select from gallery'),
                 onTap: () {
                   Navigator.pop(context);
-                  _showImagePicker();
+                  _pickImagesFromGallery();
                 },
               ),
               ListTile(
