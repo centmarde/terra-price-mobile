@@ -144,36 +144,43 @@ class _HomePageState extends State<HomePage> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 16.h),
-              Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.w),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.history,
-                        size: 48.w,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.5),
-                      ),
-                      SizedBox(height: 12.h),
-                      Text(
-                        'No recent activity',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              Container(
+                margin: EdgeInsets.only(left: 16.w),
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.history,
+                          size: 48.w,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.primary.withOpacity(0.5),
                         ),
-                      ),
-                      Text(
-                        'Upload your first floorplan to get started',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'No recent activity',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                    ],
+                        Text(
+                          'Upload your first floorplan to get started',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.5),
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
