@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../../landing/providers/auth_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:path/path.dart' as path;
-import 'package:mime/mime.dart';
+
+// Import the new component files
+import 'welcome_section.dart';
+import 'upload_actions_grid.dart';
+import 'selected_images_section.dart';
+import 'recent_activity_section.dart';
+import 'image_selection_bottom_sheet.dart';
+import 'file_options_bottom_sheet.dart';
+import '../services/image_upload_service.dart';
+import '../services/upload_repository.dart';
 
 /// Home page widget - main dashboard for authenticated users
 class HomePage extends StatefulWidget {
@@ -17,218 +22,53 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<File> _selectedImages = []; // Changed to File list
+  List<File> _selectedImages = [];
   bool _isUploading = false;
-  final ImagePicker _picker = ImagePicker(); // Add image picker instance
+  final ImagePicker _picker = ImagePicker();
+
+  late final ImageUploadService _uploadService;
+  late final UploadRepository _uploadRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    _uploadService = ImageUploadService();
+    _uploadRepository = UploadRepository();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80.h, // Add custom height to AppBar
-        title: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.center, // Center the row contents
-          children: [
-            Container(
-              width: 70.w,
-              height: 70.h,
-              padding: EdgeInsets.only(top: 4.h), // Add padding top to logo
-              margin: EdgeInsets.only(left: 60.w), // Add margin right to logo
-              child: ClipRRect(
-                child: Image.asset(
-                  'lib/assets/logo.png',
-                  width: 70.w,
-                  height: 70.h,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            SizedBox(width: 8.w),
-          ],
-        ),
-        elevation: 0,
-        backgroundColor: Colors.green,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Show notifications
-            },
-            icon: const Icon(Icons.notifications_outlined),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(context),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome section
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back!',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Ready to upload images for floorplan analysis?',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-
+              const WelcomeSection(),
               SizedBox(height: 32.h),
 
-              // Image Upload Section
-              Text(
-                'Upload Images',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-
-              // Upload Options Grid
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.w,
-                mainAxisSpacing: 16.h,
-                childAspectRatio: 1.1,
-                children: [
-                  _buildActionCard(
-                    context,
-                    icon: Icons.camera_alt_outlined,
-                    title: 'Take Photo',
-                    subtitle: 'Capture with camera',
-                    onTap: () => _pickImageFromCamera(),
-                  ),
-                  _buildActionCard(
-                    context,
-                    icon: Icons.photo_library_outlined,
-                    title: 'Select Images',
-                    subtitle: 'Choose from gallery',
-                    onTap: () => _showImageSelectionOptions(),
-                  ),
-                  _buildActionCard(
-                    context,
-                    icon: Icons.add_photo_alternate_outlined,
-                    title: 'Add More',
-                    subtitle: 'Select additional images',
-                    onTap: () => _showImageSelectionOptions(),
-                  ),
-                  _buildActionCard(
-                    context,
-                    icon: Icons.upload_file_outlined,
-                    title: 'Upload Files',
-                    subtitle: 'Browse documents',
-                    onTap: () => _showFileOptions(context),
-                  ),
-                ],
+              UploadActionsGrid(
+                onCameraPressed: _pickImageFromCamera,
+                onGalleryPressed: _showImageSelectionOptions,
+                onAddMorePressed: _showImageSelectionOptions,
+                onUploadFilesPressed: () => _showFileOptions(context),
               ),
 
               if (_selectedImages.isNotEmpty) ...[
                 SizedBox(height: 32.h),
-                Text(
-                  'Selected Images (${_selectedImages.length})',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                SelectedImagesSection(
+                  selectedImages: _selectedImages,
+                  isUploading: _isUploading,
+                  onRemoveImage: _removeImage,
+                  onUpload: _uploadImages,
                 ),
-                SizedBox(height: 16.h),
-                _buildSelectedImagesGrid(),
-                SizedBox(height: 16.h),
-                _buildUploadButton(),
               ],
 
               SizedBox(height: 32.h),
 
-              // Recent Activity Section
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: _getUserUploads(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final uploads = snapshot.data ?? [];
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Recent Activity',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      if (uploads.isEmpty)
-                        Container(
-                          margin: EdgeInsets.only(left: 16.w),
-                          child: Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.w),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.history,
-                                    size: 48.w,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.5),
-                                  ),
-                                  SizedBox(height: 12.h),
-                                  Text(
-                                    'No recent activity',
-                                    style: Theme.of(context).textTheme.bodyLarge
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.6),
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        ...uploads
-                            .take(5)
-                            .map(
-                              (upload) => Card(
-                                margin: EdgeInsets.only(bottom: 8.h),
-                                child: ListTile(
-                                  leading: const Icon(Icons.image),
-                                  title: Text(upload['file_name']),
-                                  subtitle: Text(
-                                    'Uploaded: ${DateTime.parse(upload['created_at']).toString().split('.')[0]}',
-                                  ),
-                                  trailing: Text(upload['status']),
-                                ),
-                              ),
-                            ),
-                    ],
-                  );
-                },
-              ),
+              RecentActivitySection(uploadRepository: _uploadRepository),
             ],
           ),
         ),
@@ -236,159 +76,43 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 32.w,
-                color: Theme.of(context).colorScheme.primary,
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      toolbarHeight: 80.h,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 70.w,
+            height: 70.h,
+            padding: EdgeInsets.only(top: 4.h),
+            margin: EdgeInsets.only(left: 60.w),
+            child: ClipRRect(
+              child: Image.asset(
+                'lib/assets/logo.png',
+                width: 70.w,
+                height: 70.h,
+                fit: BoxFit.contain,
               ),
-              SizedBox(height: 12.h),
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectedImagesGrid() {
-    return SizedBox(
-      height: 120.h,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages.length,
-        itemBuilder: (context, index) {
-          return Container(
-            width: 120.w,
-            margin: EdgeInsets.only(right: 8.w),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.r),
-                  child: Container(
-                    width: 120.w,
-                    height: 120.h,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Image.file(
-                      _selectedImages[index],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant,
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.image_outlined,
-                                size: 40.w,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                'Image ${index + 1}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 4.h,
-                  right: 4.w,
-                  child: GestureDetector(
-                    onTap: () => _removeImage(index),
-                    child: Container(
-                      padding: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.close, size: 16.w, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildUploadButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isUploading ? null : _uploadImages,
-        style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
           ),
-        ),
-        child: _isUploading
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.w,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  SizedBox(width: 12.w),
-                  const Text('Uploading...'),
-                ],
-              )
-            : Text(
-                'Upload ${_selectedImages.length} Image${_selectedImages.length > 1 ? 's' : ''}',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-              ),
+          SizedBox(width: 8.w),
+        ],
       ),
+      elevation: 0,
+      backgroundColor: Colors.green,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      actions: [
+        IconButton(
+          onPressed: () {
+            // Show notifications
+          },
+          icon: const Icon(Icons.notifications_outlined),
+        ),
+      ],
     );
   }
 
-  // New method to pick image from camera
   Future<void> _pickImageFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -408,7 +132,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Method to pick images from gallery
   Future<void> _pickImagesFromGallery() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -428,61 +151,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Method to show image selection options
   void _showImageSelectionOptions() {
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select Images',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Pick Single Image'),
-                subtitle: const Text('Select one image from gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImagesFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.add_photo_alternate),
-                title: const Text('Pick Multiple Images'),
-                subtitle: const Text('Select one image at a time'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickMultipleImages();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Take Photo'),
-                subtitle: const Text('Use camera to take a photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromCamera();
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => ImageSelectionBottomSheet(
+        onPickSingle: _pickImagesFromGallery,
+        onPickMultiple: _pickMultipleImages,
+        onTakePhoto: _pickImageFromCamera,
+      ),
     );
   }
 
-  // Method to pick multiple images (one by one)
   Future<void> _pickMultipleImages() async {
     int count = 0;
-    const maxImages = 5; // Limit to prevent too many selections
+    const maxImages = 5;
 
     while (count < maxImages) {
       try {
@@ -499,7 +181,6 @@ class _HomePageState extends State<HomePage> {
           });
           count++;
 
-          // Ask if user wants to add more
           if (count < maxImages) {
             final bool? addMore = await showDialog<bool>(
               context: context,
@@ -526,7 +207,7 @@ class _HomePageState extends State<HomePage> {
             if (addMore != true) break;
           }
         } else {
-          break; // User cancelled selection
+          break;
         }
       } catch (e) {
         _showErrorSnackBar('Failed to select image: $e');
@@ -541,8 +222,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  final SupabaseClient _supabase = Supabase.instance.client;
-
   Future<void> _uploadImages() async {
     if (_selectedImages.isEmpty) return;
 
@@ -551,49 +230,8 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
+      await _uploadService.uploadImages(_selectedImages);
 
-      List<String> uploadedFilePaths = [];
-
-      for (int i = 0; i < _selectedImages.length; i++) {
-        final file = _selectedImages[i];
-        final fileExtension = path.extension(file.path).toLowerCase();
-        final fileName =
-            'image_${DateTime.now().millisecondsSinceEpoch}_$i$fileExtension';
-        final filePath = '$userId/$fileName';
-
-        // Get file size
-        final fileSize = await file.length();
-
-        // Upload to Supabase Storage
-        await _supabase.storage
-            .from('mobile_uploads')
-            .upload(
-              filePath,
-              file,
-              fileOptions: FileOptions(
-                cacheControl: '3600',
-                upsert: false,
-                contentType: lookupMimeType(file.path),
-              ),
-            );
-
-        // Insert record into mobile_uploads table
-        await _supabase.from('mobile_uploads').insert({
-          'user_id': userId,
-          'file_name': fileName,
-          'file_path': filePath,
-          'file_size': fileSize,
-          'status': 'uploaded',
-        });
-
-        uploadedFilePaths.add(filePath);
-      }
-
-      // Clear selected images after successful upload
       setState(() {
         _selectedImages.clear();
         _isUploading = false;
@@ -601,10 +239,8 @@ class _HomePageState extends State<HomePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${uploadedFilePaths.length} image(s) uploaded successfully!',
-            ),
+          const SnackBar(
+            content: Text('Images uploaded successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -617,119 +253,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Helper method to update upload status
-  Future<void> _updateUploadStatus(String filePath, String status) async {
-    try {
-      await _supabase
-          .from('mobile_uploads')
-          .update({
-            'status': status,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('file_path', filePath);
-    } catch (e) {
-      print('Failed to update status: $e');
-    }
-  }
-
-  // Method to get user's uploaded images
-  Future<List<Map<String, dynamic>>> _getUserUploads() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return [];
-
-      final response = await _supabase
-          .from('mobile_uploads')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
-
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      print('Failed to fetch uploads: $e');
-      return [];
-    }
-  }
-
-  // Method to get public URL for uploaded image
-  String? _getImageUrl(String filePath) {
-    try {
-      return _supabase.storage.from('mobile_uploads').getPublicUrl(filePath);
-    } catch (e) {
-      print('Failed to get image URL: $e');
-      return null;
-    }
-  }
-
-  // Method to delete uploaded file
-  Future<void> _deleteUpload(String filePath) async {
-    try {
-      // Delete from storage
-      await _supabase.storage.from('mobile_uploads').remove([filePath]);
-
-      // Delete from database
-      await _supabase.from('mobile_uploads').delete().eq('file_path', filePath);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File deleted successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to delete file: ${e.toString()}');
-    }
-  }
-
   void _showFileOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Upload Options',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                subtitle: const Text('Take a photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromCamera();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                subtitle: const Text('Select from gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImagesFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('Documents'),
-                subtitle: const Text('PDF, Word files, etc.'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showErrorSnackBar('File picker not implemented yet');
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => FileOptionsBottomSheet(
+        onCameraPressed: _pickImageFromCamera,
+        onGalleryPressed: _pickImagesFromGallery,
+        onDocumentsPressed: () {
+          _showErrorSnackBar('File picker not implemented yet');
+        },
+      ),
     );
   }
 
