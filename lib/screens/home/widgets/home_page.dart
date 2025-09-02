@@ -25,9 +25,27 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'TerraPrice',
-          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+        toolbarHeight: 80.h, // Add custom height to AppBar
+        title: Row(
+          mainAxisAlignment:
+              MainAxisAlignment.center, // Center the row contents
+          children: [
+            Container(
+              width: 70.w,
+              height: 70.h,
+              padding: EdgeInsets.only(top: 4.h), // Add padding top to logo
+              margin: EdgeInsets.only(left: 60.w), // Add margin right to logo
+              child: ClipRRect(
+                child: Image.asset(
+                  'lib/assets/logo.png',
+                  width: 70.w,
+                  height: 70.h,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+          ],
         ),
         elevation: 0,
         backgroundColor: Colors.green,
