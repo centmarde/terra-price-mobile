@@ -14,7 +14,7 @@ class SettingsPage extends StatelessWidget {
           style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Colors.green,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: SafeArea(
