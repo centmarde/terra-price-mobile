@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart'; // Add this import
 import 'dart:io'; // Add this import
 import '../../landing/providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:path/path.dart' as path;
+import 'package:mime/mime.dart';
 
 /// Home page widget - main dashboard for authenticated users
 class HomePage extends StatefulWidget {
@@ -136,53 +139,77 @@ class _HomePageState extends State<HomePage> {
 
               SizedBox(height: 32.h),
 
-              // Recent Activity Section (placeholder for now)
-              Text(
-                'Recent Activity',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-              Container(
-                margin: EdgeInsets.only(left: 16.w),
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.history,
-                          size: 48.w,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.5),
+              // Recent Activity Section
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _getUserUploads(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final uploads = snapshot.data ?? [];
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recent Activity',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 12.h),
-                        Text(
-                          'No recent activity',
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      SizedBox(height: 16.h),
+                      if (uploads.isEmpty)
+                        Container(
+                          margin: EdgeInsets.only(left: 16.w),
+                          child: Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.w),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.history,
+                                    size: 48.w,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.5),
+                                  ),
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    'No recent activity',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
-                          textAlign: TextAlign.center,
-                        ),
-                        Text(
-                          'Upload your first floorplan to get started',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                        )
+                      else
+                        ...uploads
+                            .take(5)
+                            .map(
+                              (upload) => Card(
+                                margin: EdgeInsets.only(bottom: 8.h),
+                                child: ListTile(
+                                  leading: const Icon(Icons.image),
+                                  title: Text(upload['file_name']),
+                                  subtitle: Text(
+                                    'Uploaded: ${DateTime.parse(upload['created_at']).toString().split('.')[0]}',
+                                  ),
+                                  trailing: Text(upload['status']),
+                                ),
                               ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                            ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -496,6 +523,8 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  final SupabaseClient _supabase = Supabase.instance.client;
+
   Future<void> _uploadImages() async {
     if (_selectedImages.isEmpty) return;
 
@@ -504,9 +533,47 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      // TODO: Implement your actual upload logic here
-      // This is where you would send the images to your backend/API
-      await Future.delayed(const Duration(seconds: 2)); // Simulate upload
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      List<String> uploadedFilePaths = [];
+
+      for (int i = 0; i < _selectedImages.length; i++) {
+        final file = _selectedImages[i];
+        final fileExtension = path.extension(file.path).toLowerCase();
+        final fileName =
+            'image_${DateTime.now().millisecondsSinceEpoch}_$i$fileExtension';
+        final filePath = '$userId/$fileName';
+
+        // Get file size
+        final fileSize = await file.length();
+
+        // Upload to Supabase Storage
+        await _supabase.storage
+            .from('mobile_uploads')
+            .upload(
+              filePath,
+              file,
+              fileOptions: FileOptions(
+                cacheControl: '3600',
+                upsert: false,
+                contentType: lookupMimeType(file.path),
+              ),
+            );
+
+        // Insert record into mobile_uploads table
+        await _supabase.from('mobile_uploads').insert({
+          'user_id': userId,
+          'file_name': fileName,
+          'file_path': filePath,
+          'file_size': fileSize,
+          'status': 'uploaded',
+        });
+
+        uploadedFilePaths.add(filePath);
+      }
 
       // Clear selected images after successful upload
       setState(() {
@@ -516,8 +583,10 @@ class _HomePageState extends State<HomePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Images uploaded successfully!'),
+          SnackBar(
+            content: Text(
+              '${uploadedFilePaths.length} image(s) uploaded successfully!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -526,7 +595,73 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _isUploading = false;
       });
-      _showErrorSnackBar('Upload failed: $e');
+      _showErrorSnackBar('Upload failed: ${e.toString()}');
+    }
+  }
+
+  // Helper method to update upload status
+  Future<void> _updateUploadStatus(String filePath, String status) async {
+    try {
+      await _supabase
+          .from('mobile_uploads')
+          .update({
+            'status': status,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('file_path', filePath);
+    } catch (e) {
+      print('Failed to update status: $e');
+    }
+  }
+
+  // Method to get user's uploaded images
+  Future<List<Map<String, dynamic>>> _getUserUploads() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return [];
+
+      final response = await _supabase
+          .from('mobile_uploads')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Failed to fetch uploads: $e');
+      return [];
+    }
+  }
+
+  // Method to get public URL for uploaded image
+  String? _getImageUrl(String filePath) {
+    try {
+      return _supabase.storage.from('mobile_uploads').getPublicUrl(filePath);
+    } catch (e) {
+      print('Failed to get image URL: $e');
+      return null;
+    }
+  }
+
+  // Method to delete uploaded file
+  Future<void> _deleteUpload(String filePath) async {
+    try {
+      // Delete from storage
+      await _supabase.storage.from('mobile_uploads').remove([filePath]);
+
+      // Delete from database
+      await _supabase.from('mobile_uploads').delete().eq('file_path', filePath);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File deleted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to delete file: ${e.toString()}');
     }
   }
 

@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  path: ^1.8.0
+  mime: ^1.0.4
+
   # For picking images from the gallery or camera
   image_picker: ^1.0.4
 
