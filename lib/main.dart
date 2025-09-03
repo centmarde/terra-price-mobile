@@ -11,10 +11,6 @@ import 'screens/splash/providers/splash_provider.dart';
 import 'screens/landing/providers/auth_provider.dart';
 import 'screens/landing/providers/landing_provider.dart';
 
-// Add these imports for your main pages:
-import './screens/home/widgets/home_page.dart';
-import 'screens/ai_results_page.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -36,41 +32,27 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // iPhone X base design size
+      designSize: const Size(375, 812),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
         return MultiProvider(
           providers: [
-            // Global authentication state provider
             ChangeNotifierProvider(
               create: (context) => AuthStateProvider(),
-              lazy: false, // Initialize immediately
+              lazy: false,
             ),
-
-            // Splash provider
             ChangeNotifierProvider(create: (context) => SplashProvider()),
-
-            // Authentication provider
             ChangeNotifierProvider(create: (context) => AuthProvider()),
-
-            // Landing page provider
             ChangeNotifierProvider(create: (context) => LandingProvider()),
           ],
           child: Consumer<AuthStateProvider>(
             builder: (context, authStateProvider, child) {
-              return MaterialApp(
+              return MaterialApp.router(
                 title: 'TerraPrice',
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.lightTheme,
-                // Add named routes for navigation, including ai_results_page and home_page
-                routes: {
-                  '/': (context) => const HomePage(),
-                  '/ai_results_page': (context) => const AIResultsPage(),
-                  // Add other named routes here if needed
-                },
-                // If you need more advanced routing, add it here
-                // routerConfig: AppRoutes.createRouter(authStateProvider),
+                routerConfig: AppRoutes.createRouter(authStateProvider),
               );
             },
           ),

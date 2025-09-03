@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:go_router/go_router.dart';
 
 // Import the new component files
 import 'welcome_section.dart';
@@ -12,7 +13,7 @@ import 'image_selection_bottom_sheet.dart';
 import 'file_options_bottom_sheet.dart';
 import '../services/image_upload_service.dart';
 import '../services/upload_repository.dart';
-import 'upload_image_loader.dart'; // <-- Loader widget for analyzing step
+import 'upload_image_loader.dart';
 
 /// Home page widget - main dashboard for authenticated users
 class HomePage extends StatefulWidget {
@@ -300,6 +301,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _showLoader = false;
     });
-    Navigator.of(context).pushReplacementNamed('/ai_results_page');
+    context.go('/ai_results_page');
   }
 }
