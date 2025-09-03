@@ -11,6 +11,10 @@ import 'screens/splash/providers/splash_provider.dart';
 import 'screens/landing/providers/auth_provider.dart';
 import 'screens/landing/providers/landing_provider.dart';
 
+// Add these imports for your main pages:
+import './screens/home/widgets/home_page.dart';
+import 'screens/ai_results_page.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -55,11 +59,18 @@ class MyApp extends StatelessWidget {
           ],
           child: Consumer<AuthStateProvider>(
             builder: (context, authStateProvider, child) {
-              return MaterialApp.router(
+              return MaterialApp(
                 title: 'TerraPrice',
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.lightTheme,
-                routerConfig: AppRoutes.createRouter(authStateProvider),
+                // Add named routes for navigation, including ai_results_page and home_page
+                routes: {
+                  '/': (context) => const HomePage(),
+                  '/ai_results_page': (context) => const AIResultsPage(),
+                  // Add other named routes here if needed
+                },
+                // If you need more advanced routing, add it here
+                // routerConfig: AppRoutes.createRouter(authStateProvider),
               );
             },
           ),
