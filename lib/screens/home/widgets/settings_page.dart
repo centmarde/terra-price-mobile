@@ -9,6 +9,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 80.h,
         title: Text(
           'Settings',
           style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
