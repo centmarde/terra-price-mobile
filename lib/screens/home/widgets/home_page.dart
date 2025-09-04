@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:go_router/go_router.dart';
 
 // Import the new component files
 import 'welcome_section.dart';
@@ -12,6 +13,7 @@ import 'image_selection_bottom_sheet.dart';
 import 'file_options_bottom_sheet.dart';
 import '../services/image_upload_service.dart';
 import '../services/upload_repository.dart';
+import 'upload_image_loader.dart';
 
 /// Home page widget - main dashboard for authenticated users
 class HomePage extends StatefulWidget {
@@ -24,6 +26,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<File> _selectedImages = [];
   bool _isUploading = false;
+  bool _showLoader = false; // loader state
   final ImagePicker _picker = ImagePicker();
 
   late final ImageUploadService _uploadService;
@@ -38,6 +41,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // If loader should be shown, display only loader widget
+    if (_showLoader) {
+      return Scaffold(
+        appBar: _buildAppBar(context),
+        body: SafeArea(
+          child: UploadImageLoader(onAnalysisComplete: _navigateToAIResults),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: _buildAppBar(context),
       body: SafeArea(
@@ -125,6 +138,7 @@ class _HomePageState extends State<HomePage> {
       if (image != null) {
         setState(() {
           _selectedImages.add(File(image.path));
+          _showLoader = true; // show loader after picking image
         });
       }
     } catch (e) {
@@ -144,6 +158,7 @@ class _HomePageState extends State<HomePage> {
       if (image != null) {
         setState(() {
           _selectedImages.add(File(image.path));
+          _showLoader = true; // show loader after picking image
         });
       }
     } catch (e) {
@@ -180,6 +195,14 @@ class _HomePageState extends State<HomePage> {
             _selectedImages.add(File(image.path));
           });
           count++;
+
+          if (count == 1) {
+            // Show loader after first image
+            setState(() {
+              _showLoader = true;
+            });
+            break; // Only analyze first image for now
+          }
 
           if (count < maxImages) {
             final bool? addMore = await showDialog<bool>(
@@ -272,5 +295,12 @@ class _HomePageState extends State<HomePage> {
         SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
+  }
+
+  void _navigateToAIResults() {
+    setState(() {
+      _showLoader = false;
+    });
+    context.go('/ai_results_page');
   }
 }

@@ -62,6 +62,9 @@ dependencies:
   # Local storage
   shared_preferences: ^2.5.3
 
+  # for charts
+  fl_chart: ^0.67.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

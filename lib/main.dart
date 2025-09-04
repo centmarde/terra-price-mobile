@@ -32,25 +32,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // iPhone X base design size
+      designSize: const Size(375, 812),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
         return MultiProvider(
           providers: [
-            // Global authentication state provider
             ChangeNotifierProvider(
               create: (context) => AuthStateProvider(),
-              lazy: false, // Initialize immediately
+              lazy: false,
             ),
-
-            // Splash provider
             ChangeNotifierProvider(create: (context) => SplashProvider()),
-
-            // Authentication provider
             ChangeNotifierProvider(create: (context) => AuthProvider()),
-
-            // Landing page provider
             ChangeNotifierProvider(create: (context) => LandingProvider()),
           ],
           child: Consumer<AuthStateProvider>(

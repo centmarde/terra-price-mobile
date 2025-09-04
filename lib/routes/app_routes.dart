@@ -4,14 +4,16 @@ import '../screens/splash/splash_screen.dart';
 import '../screens/landing/landing_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../core/providers/auth_state_provider.dart';
+import '../screens/home/widgets/ai_results_page.dart';
 
 /// Application routes configuration using go_router
 /// Supports navigation between splash, landing, and home screens with authentication guards
 class AppRoutes {
-  /// Route paths
+  // Route paths
   static const String splash = '/';
   static const String landing = '/landing';
   static const String home = '/home';
+  static const String aiResults = '/ai_results_page';
 
   /// Create router with authentication state provider
   static GoRouter createRouter(AuthStateProvider authStateProvider) {
@@ -51,23 +53,22 @@ class AppRoutes {
         GoRoute(
           path: splash,
           name: 'splash',
-          builder: (BuildContext context, GoRouterState state) {
-            return const SplashScreen();
-          },
+          builder: (context, state) => const SplashScreen(),
         ),
         GoRoute(
           path: landing,
           name: 'landing',
-          builder: (BuildContext context, GoRouterState state) {
-            return const LandingScreen();
-          },
+          builder: (context, state) => const LandingScreen(),
         ),
         GoRoute(
           path: home,
           name: 'home',
-          builder: (BuildContext context, GoRouterState state) {
-            return const HomeScreen();
-          },
+          builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: aiResults,
+          name: 'ai_results_page',
+          builder: (context, state) => const AIResultsPage(),
         ),
       ],
       // Error handling
