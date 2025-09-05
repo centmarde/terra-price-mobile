@@ -3,13 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ImageSelectionBottomSheet extends StatelessWidget {
   final VoidCallback onPickSingle;
-  final VoidCallback onPickMultiple;
+
   final VoidCallback onTakePhoto;
 
   const ImageSelectionBottomSheet({
     super.key,
     required this.onPickSingle,
-    required this.onPickMultiple,
+
     required this.onTakePhoto,
   });
 
@@ -34,24 +34,6 @@ class ImageSelectionBottomSheet extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               onPickSingle();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.add_photo_alternate),
-            title: const Text('Pick Multiple Images'),
-            subtitle: const Text('Select one image at a time'),
-            onTap: () {
-              Navigator.pop(context);
-              onPickMultiple();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Take Photo'),
-            subtitle: const Text('Use camera to take a photo'),
-            onTap: () {
-              Navigator.pop(context);
-              onTakePhoto();
             },
           ),
         ],

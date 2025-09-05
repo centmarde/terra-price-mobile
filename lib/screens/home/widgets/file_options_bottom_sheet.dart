@@ -27,24 +27,7 @@ class FileOptionsBottomSheet extends StatelessWidget {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 16.h),
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Camera'),
-            subtitle: const Text('Take a photo'),
-            onTap: () {
-              Navigator.pop(context);
-              onCameraPressed();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Gallery'),
-            subtitle: const Text('Select from gallery'),
-            onTap: () {
-              Navigator.pop(context);
-              onGalleryPressed();
-            },
-          ),
+
           ListTile(
             leading: const Icon(Icons.description),
             title: const Text('Documents'),

@@ -1,26 +1,37 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import '../services/image_picker_service.dart';
+import '../services/image_upload_service.dart';
 
-/// Home screen state management provider
-/// Handles navigation between different pages in the bottom navigation
 class HomeProvider extends ChangeNotifier {
+  final ImagePickerService _imagePickerService = ImagePickerService();
+  final ImageUploadService _uploadService = ImageUploadService();
+  final PageController _pageController = PageController();
+
+  // Navigation properties
   int _currentIndex = 0;
-  late PageController _pageController;
 
-  HomeProvider() {
-    _pageController = PageController(initialPage: _currentIndex);
-  }
+  // Image properties
+  List<File> _selectedImages = [];
+  bool _isUploading = false;
+  bool _showLoader = false;
 
-  // Getters
-  int get currentIndex => _currentIndex;
+  // Navigation getters
   PageController get pageController => _pageController;
+  int get currentIndex => _currentIndex;
 
-  /// Set current index and notify listeners
+  // Image getters
+  List<File> get selectedImages => _selectedImages;
+  bool get isUploading => _isUploading;
+  bool get showLoader => _showLoader;
+
+  // Navigation methods
   void setCurrentIndex(int index) {
     _currentIndex = index;
     notifyListeners();
   }
 
-  /// Navigate to specific page
   void navigateToPage(int index) {
     _currentIndex = index;
     _pageController.animateToPage(
@@ -28,6 +39,78 @@ class HomeProvider extends ChangeNotifier {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    notifyListeners();
+  }
+
+  // Image picking methods
+  Future<String?> pickImageFromCamera() async {
+    try {
+      final image = await _imagePickerService.pickImageFromCamera();
+      if (image != null) {
+        _selectedImages.add(image);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> pickImageFromGallery() async {
+    try {
+      final image = await _imagePickerService.pickImageFromGallery();
+      if (image != null) {
+        _selectedImages.add(image);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> pickMultipleImages() async {
+    try {
+      final images = await _imagePickerService.pickMultipleImages();
+      if (images.isNotEmpty) {
+        _selectedImages.addAll(images);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  void removeImage(int index) {
+    _selectedImages.removeAt(index);
+    notifyListeners();
+  }
+
+  Future<String?> uploadImages() async {
+    if (_selectedImages.isEmpty) return null;
+
+    _isUploading = true;
+    notifyListeners();
+
+    try {
+      await _uploadService.uploadImages(_selectedImages);
+      _selectedImages.clear();
+      _isUploading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _isUploading = false;
+      notifyListeners();
+      return 'Upload failed: ${e.toString()}';
+    }
+  }
+
+  void setShowLoader(bool value) {
+    _showLoader = value;
     notifyListeners();
   }
 
