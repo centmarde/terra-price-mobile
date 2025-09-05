@@ -3,19 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-// Components
+// Import the new component files
 import 'welcome_section.dart';
 import 'upload_actions_grid.dart';
 import 'selected_images_section.dart';
 import 'image_selection_bottom_sheet.dart';
 import 'file_options_bottom_sheet.dart';
 import 'upload_image_loader.dart';
-
-// Widgets
 import '../widgets/home_app_bar.dart';
 import '../widgets/recent_images_bottom_sheet.dart';
-
-// Providers & Mixins
 import '../providers/home_provider.dart';
 import '../mixins/snackbar_mixin.dart';
 
@@ -34,77 +30,58 @@ class _HomePageState extends State<HomePage> with SnackBarMixin {
       create: (_) => HomeProvider(),
       child: Consumer<HomeProvider>(
         builder: (context, provider, child) {
+          // If loader should be shown, display only loader widget
+          if (provider.showLoader) {
+            return Scaffold(
+              appBar: const HomeAppBar(),
+              body: SafeArea(
+                child: UploadImageLoader(
+                  onAnalysisComplete: () => _navigateToAIResults(provider),
+                ),
+              ),
+            );
+          }
+
           return Scaffold(
             appBar: const HomeAppBar(),
             body: SafeArea(
-              child: provider.showLoader
-                  ? _buildLoaderView(provider)
-                  : _buildMainContent(provider),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const WelcomeSection(),
+                    SizedBox(height: 48.h),
+
+                    UploadActionsGrid(
+                      onCameraPressed: () =>
+                          _handleImagePicking(provider.pickImageFromCamera),
+                      onGalleryPressed: () =>
+                          _showImageSelectionOptions(provider),
+                      onRecentImagesPressed: _showRecentImages,
+                      onUploadFilesPressed: _showFileOptions,
+                    ),
+
+                    if (provider.selectedImages.isNotEmpty) ...[
+                      SizedBox(height: 32.h),
+                      SelectedImagesSection(
+                        selectedImages: provider.selectedImages,
+                        isUploading: provider.isUploading,
+                        onRemoveImage: provider.removeImage,
+                        onUpload: () => _handleUpload(provider),
+                      ),
+                    ],
+
+                    SizedBox(height: 32.h),
+                  ],
+                ),
+              ),
             ),
           );
         },
       ),
     );
   }
-
-  // ========================================
-  // UI BUILDERS
-  // ========================================
-
-  Widget _buildLoaderView(HomeProvider provider) {
-    return UploadImageLoader(
-      onAnalysisComplete: () => _navigateToAIResults(provider),
-    );
-  }
-
-  Widget _buildMainContent(HomeProvider provider) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome Section
-          const WelcomeSection(),
-
-          SizedBox(height: 32.h),
-
-          // Upload Actions Grid
-          _buildUploadActionsSection(provider),
-
-          // Selected Images Section (conditional)
-          if (provider.selectedImages.isNotEmpty) ...[
-            SizedBox(height: 32.h),
-            _buildSelectedImagesSection(provider),
-          ],
-
-          // Bottom padding for better scrolling
-          SizedBox(height: 32.h),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUploadActionsSection(HomeProvider provider) {
-    return UploadActionsGrid(
-      onCameraPressed: () => _handleImagePicking(provider.pickImageFromCamera),
-      onGalleryPressed: () => _showImageSelectionOptions(provider),
-      onRecentImagesPressed: _showRecentImages,
-      onUploadFilesPressed: _showFileOptions,
-    );
-  }
-
-  Widget _buildSelectedImagesSection(HomeProvider provider) {
-    return SelectedImagesSection(
-      selectedImages: provider.selectedImages,
-      isUploading: provider.isUploading,
-      onRemoveImage: provider.removeImage,
-      onUpload: () => _handleUpload(provider),
-    );
-  }
-
-  // ========================================
-  // EVENT HANDLERS
-  // ========================================
 
   Future<void> _handleImagePicking(
     Future<String?> Function() pickFunction,
@@ -124,15 +101,9 @@ class _HomePageState extends State<HomePage> with SnackBarMixin {
     }
   }
 
-  // ========================================
-  // BOTTOM SHEETS & MODALS
-  // ========================================
-
   void _showImageSelectionOptions(HomeProvider provider) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => ImageSelectionBottomSheet(
         onPickSingle: () => _handleImagePicking(provider.pickImageFromGallery),
         onTakePhoto: () => _handleImagePicking(provider.pickImageFromCamera),
@@ -152,8 +123,6 @@ class _HomePageState extends State<HomePage> with SnackBarMixin {
   void _showFileOptions() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => FileOptionsBottomSheet(
         onCameraPressed: () => Navigator.pop(context),
         onGalleryPressed: () => Navigator.pop(context),
@@ -164,10 +133,6 @@ class _HomePageState extends State<HomePage> with SnackBarMixin {
       ),
     );
   }
-
-  // ========================================
-  // NAVIGATION
-  // ========================================
 
   void _navigateToAIResults(HomeProvider provider) {
     provider.setShowLoader(false);
