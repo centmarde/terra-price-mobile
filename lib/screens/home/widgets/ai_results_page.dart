@@ -105,7 +105,7 @@ class AIResultsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Map mock
+          // AI Floorplan Analysis
           Card(
             elevation: 4,
             child: Padding(
@@ -113,24 +113,116 @@ class AIResultsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Location Map',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.architecture,
+                        color: Colors.green[700],
+                        size: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'AI Floorplan Analysis',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
+
+                  // AI Generated Floorplan Image
                   Container(
-                    height: 180,
+                    height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.green, width: 2),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '[Map preview here]',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      gradient: LinearGradient(
+                        colors: [Colors.grey[100]!, Colors.grey[200]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Mock floorplan layout
+                        Positioned.fill(
+                          child: CustomPaint(painter: FloorplanPainter()),
+                        ),
+
+                        // AI Badge
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'AI Generated',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Analysis insights
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green[200]!, width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Key Insights:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _insightItem(
+                          '✓ Open floor plan maximizes space utilization',
+                        ),
+                        _insightItem('✓ Natural light optimization detected'),
+                        _insightItem(
+                          '✓ Efficient room layout increases property value',
+                        ),
+                        _insightItem(
+                          '✓ Modern furniture placement suggests premium quality',
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -265,4 +357,120 @@ class AIResultsPage extends StatelessWidget {
       ],
     );
   }
+
+  Widget _insightItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 14, color: Colors.green[700], height: 1.3),
+      ),
+    );
+  }
+}
+
+// Custom painter for mock floorplan visualization
+class FloorplanPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    // Draw rooms outline
+    paint.color = Colors.grey[600]!;
+
+    // Living room
+    canvas.drawRect(
+      Rect.fromLTWH(20, 20, size.width * 0.6, size.height * 0.4),
+      paint,
+    );
+
+    // Kitchen
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * 0.65,
+        20,
+        size.width * 0.3,
+        size.height * 0.25,
+      ),
+      paint,
+    );
+
+    // Bedroom 1
+    canvas.drawRect(
+      Rect.fromLTWH(
+        20,
+        size.height * 0.45,
+        size.width * 0.35,
+        size.height * 0.5,
+      ),
+      paint,
+    );
+
+    // Bedroom 2
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * 0.4,
+        size.height * 0.45,
+        size.width * 0.25,
+        size.height * 0.35,
+      ),
+      paint,
+    );
+
+    // Bathroom
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * 0.7,
+        size.height * 0.3,
+        size.width * 0.25,
+        size.height * 0.25,
+      ),
+      paint,
+    );
+
+    // Draw doors
+    paint.color = Colors.brown;
+    paint.strokeWidth = 3.0;
+
+    // Door lines (simplified)
+    canvas.drawLine(
+      Offset(size.width * 0.3, 20),
+      Offset(size.width * 0.35, 20),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.6, size.height * 0.2),
+      Offset(size.width * 0.65, size.height * 0.2),
+      paint,
+    );
+
+    // Draw furniture (simplified rectangles)
+    paint.color = Colors.green[400]!;
+    paint.style = PaintingStyle.fill;
+
+    // Sofa
+    canvas.drawRect(
+      Rect.fromLTWH(40, 40, size.width * 0.2, size.height * 0.1),
+      paint,
+    );
+
+    // Bed
+    canvas.drawRect(
+      Rect.fromLTWH(
+        30,
+        size.height * 0.6,
+        size.width * 0.15,
+        size.height * 0.2,
+      ),
+      paint,
+    );
+
+    // Table
+    canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.25), 20, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
