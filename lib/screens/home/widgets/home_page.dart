@@ -65,7 +65,7 @@ class _HomePageState extends State<HomePage> {
               UploadActionsGrid(
                 onCameraPressed: _pickImageFromCamera,
                 onGalleryPressed: _showImageSelectionOptions,
-                onAddMorePressed: _showImageSelectionOptions,
+                onRecentImagesPressed: _showRecentImages,
                 onUploadFilesPressed: () => _showFileOptions(context),
               ),
 
@@ -173,6 +173,90 @@ class _HomePageState extends State<HomePage> {
         onPickSingle: _pickImagesFromGallery,
         onPickMultiple: _pickMultipleImages,
         onTakePhoto: _pickImageFromCamera,
+      ),
+    );
+  }
+
+  // ADD THIS NEW METHOD
+  void _showRecentImages() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildRecentImagesBottomSheet(),
+    );
+  }
+
+  // ADD THIS NEW METHOD
+  Widget _buildRecentImagesBottomSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40.w,
+            height: 4.h,
+            margin: EdgeInsets.symmetric(vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.r),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recent Images',
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+
+          Divider(height: 1.h),
+
+          // Content
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.photo_library_outlined,
+                    size: 48.sp,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Recent Images feature coming soon',
+                    style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Use camera or gallery for now',
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

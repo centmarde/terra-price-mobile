@@ -5,14 +5,14 @@ import 'action_card.dart';
 class UploadActionsGrid extends StatelessWidget {
   final VoidCallback onCameraPressed;
   final VoidCallback onGalleryPressed;
-  final VoidCallback onAddMorePressed;
+  final VoidCallback onRecentImagesPressed;
   final VoidCallback onUploadFilesPressed;
 
   const UploadActionsGrid({
     super.key,
     required this.onCameraPressed,
     required this.onGalleryPressed,
-    required this.onAddMorePressed,
+    required this.onRecentImagesPressed,
     required this.onUploadFilesPressed,
   });
 
@@ -49,10 +49,10 @@ class UploadActionsGrid extends StatelessWidget {
               onTap: onGalleryPressed,
             ),
             ActionCard(
-              icon: Icons.add_photo_alternate_outlined,
-              title: 'Add More',
-              subtitle: 'Select additional images',
-              onTap: onAddMorePressed,
+              icon: Icons.history_outlined,
+              title: 'Recent Images',
+              subtitle: 'View recently taken photos',
+              onTap: onRecentImagesPressed,
             ),
             ActionCard(
               icon: Icons.upload_file_outlined,
