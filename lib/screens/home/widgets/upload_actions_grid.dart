@@ -44,7 +44,7 @@ class UploadActionsGrid extends StatelessWidget {
             ),
             ActionCard(
               icon: Icons.photo_library_outlined,
-              title: 'Select Images',
+              title: 'Select an Image',
               subtitle: 'Choose from gallery',
               onTap: onGalleryPressed,
             ),

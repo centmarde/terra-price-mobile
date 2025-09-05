@@ -36,15 +36,6 @@ class ImageSelectionBottomSheet extends StatelessWidget {
               onPickSingle();
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Take Photo'),
-            subtitle: const Text('Use camera to take a photo'),
-            onTap: () {
-              Navigator.pop(context);
-              onTakePhoto();
-            },
-          ),
         ],
       ),
     );
