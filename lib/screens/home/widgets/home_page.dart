@@ -118,7 +118,6 @@ class _HomePageState extends State<HomePage> with SnackBarMixin {
       context: context,
       builder: (context) => ImageSelectionBottomSheet(
         onPickSingle: () => _handleImagePicking(provider.pickImageFromGallery),
-        onPickMultiple: () => _handleImagePicking(provider.pickMultipleImages),
         onTakePhoto: () => _handleImagePicking(provider.pickImageFromCamera),
       ),
     );

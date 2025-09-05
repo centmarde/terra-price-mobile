@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'dart:io';
 import '../services/image_picker_service.dart';
 import '../services/image_upload_service.dart';
@@ -6,15 +7,40 @@ import '../services/image_upload_service.dart';
 class HomeProvider extends ChangeNotifier {
   final ImagePickerService _imagePickerService = ImagePickerService();
   final ImageUploadService _uploadService = ImageUploadService();
+  final PageController _pageController = PageController();
 
+  // Navigation properties
+  int _currentIndex = 0;
+
+  // Image properties
   List<File> _selectedImages = [];
   bool _isUploading = false;
   bool _showLoader = false;
 
-  // Getters
+  // Navigation getters
+  PageController get pageController => _pageController;
+  int get currentIndex => _currentIndex;
+
+  // Image getters
   List<File> get selectedImages => _selectedImages;
   bool get isUploading => _isUploading;
   bool get showLoader => _showLoader;
+
+  // Navigation methods
+  void setCurrentIndex(int index) {
+    _currentIndex = index;
+    notifyListeners();
+  }
+
+  void navigateToPage(int index) {
+    _currentIndex = index;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    notifyListeners();
+  }
 
   // Image picking methods
   Future<String?> pickImageFromCamera() async {
@@ -86,5 +112,11 @@ class HomeProvider extends ChangeNotifier {
   void setShowLoader(bool value) {
     _showLoader = value;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 }
