@@ -5,6 +5,7 @@ import 'providers/home_provider.dart';
 import 'widgets/home_page.dart';
 import '../profile/profile_page.dart';
 import '../settings/settings_page.dart';
+import '.././profile/providers/profile_provider.dart'; // Add this import
 
 /// Home screen with bottom navigation and page view
 /// Main screen for authenticated users
@@ -13,8 +14,13 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => HomeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => HomeProvider()),
+        ChangeNotifierProvider(
+          create: (context) => ProfileProvider(),
+        ), // Add this
+      ],
       child: Consumer<HomeProvider>(
         builder: (context, homeProvider, child) {
           return Scaffold(
