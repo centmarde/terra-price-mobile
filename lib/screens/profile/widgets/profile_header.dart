@@ -121,26 +121,8 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                         )
                       : null,
                 ),
+
                 // Edit button
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () => _showEditProfileDialog(context),
-                    child: Container(
-                      padding: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(Icons.edit, size: 16.w, color: Colors.white),
-                    ),
-                  ),
-                ),
               ],
             ),
 
@@ -184,95 +166,10 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                 ),
               ),
             ],
-
-            // Last updated info - using current date/time format
-            if (profile?.updatedAt != null) ...[
-              SizedBox(height: 12.h),
-              Text(
-                'Updated: ${_formatDateTime(profile!.updatedAt!)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
-                ),
-              ),
-            ],
           ],
         );
       },
     );
-  }
-
-  void _showEditProfileDialog(BuildContext context) {
-    final profileProvider = context.read<ProfileProvider>();
-    final profile = profileProvider.profile;
-
-    final nameController = TextEditingController(text: profile?.fullName ?? '');
-    final bioController = TextEditingController(text: profile?.bio ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: bioController,
-              decoration: const InputDecoration(
-                labelText: 'Bio',
-                border: OutlineInputBorder(),
-                hintText: 'Tell us about yourself...',
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await profileProvider.updateProfile(
-                fullName: nameController.text.trim(),
-                bio: bioController.text.trim(),
-              );
-
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? 'Profile updated successfully!'
-                          : 'Failed to update profile',
-                    ),
-                    backgroundColor: success ? Colors.green : Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Updated to match your current date/time format: 2025-09-05 17:54:04
-  String _formatDateTime(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
   }
 }
 
