@@ -95,8 +95,8 @@ class AIResultsPage extends StatelessWidget {
                     children: [
                       _dashboardTile(Icons.home, 'Size', '120 sqm'),
                       _dashboardTile(Icons.location_city, 'Rooms', '3'),
-                      _dashboardTile(Icons.directions_car, 'Parking', '2'),
-                      _dashboardTile(Icons.park, 'Nearby Parks', 'Yes'),
+                      _dashboardTile(Icons.door_front_door, 'Doors', '5'),
+                      _dashboardTile(Icons.chair, 'Furnitures', '10'),
                     ],
                   ),
                 ],
