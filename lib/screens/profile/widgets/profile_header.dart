@@ -27,7 +27,7 @@ class ProfileHeader extends StatelessWidget {
 
         // User name
         Text(
-          'John Doe',
+          'Jetross Doe',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),

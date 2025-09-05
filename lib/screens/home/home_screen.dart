@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'providers/home_provider.dart';
 import 'widgets/home_page.dart';
-import 'widgets/profile_page.dart';
+import '../profile/profile_page.dart';
 import 'widgets/settings_page.dart';
 
 /// Home screen with bottom navigation and page view
