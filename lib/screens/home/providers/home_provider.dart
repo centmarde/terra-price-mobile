@@ -1,39 +1,90 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
+import '../services/image_picker_service.dart';
+import '../services/image_upload_service.dart';
 
-/// Home screen state management provider
-/// Handles navigation between different pages in the bottom navigation
 class HomeProvider extends ChangeNotifier {
-  int _currentIndex = 0;
-  late PageController _pageController;
+  final ImagePickerService _imagePickerService = ImagePickerService();
+  final ImageUploadService _uploadService = ImageUploadService();
 
-  HomeProvider() {
-    _pageController = PageController(initialPage: _currentIndex);
-  }
+  List<File> _selectedImages = [];
+  bool _isUploading = false;
+  bool _showLoader = false;
 
   // Getters
-  int get currentIndex => _currentIndex;
-  PageController get pageController => _pageController;
+  List<File> get selectedImages => _selectedImages;
+  bool get isUploading => _isUploading;
+  bool get showLoader => _showLoader;
 
-  /// Set current index and notify listeners
-  void setCurrentIndex(int index) {
-    _currentIndex = index;
+  // Image picking methods
+  Future<String?> pickImageFromCamera() async {
+    try {
+      final image = await _imagePickerService.pickImageFromCamera();
+      if (image != null) {
+        _selectedImages.add(image);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> pickImageFromGallery() async {
+    try {
+      final image = await _imagePickerService.pickImageFromGallery();
+      if (image != null) {
+        _selectedImages.add(image);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> pickMultipleImages() async {
+    try {
+      final images = await _imagePickerService.pickMultipleImages();
+      if (images.isNotEmpty) {
+        _selectedImages.addAll(images);
+        _showLoader = true;
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  void removeImage(int index) {
+    _selectedImages.removeAt(index);
     notifyListeners();
   }
 
-  /// Navigate to specific page
-  void navigateToPage(int index) {
-    _currentIndex = index;
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+  Future<String?> uploadImages() async {
+    if (_selectedImages.isEmpty) return null;
+
+    _isUploading = true;
     notifyListeners();
+
+    try {
+      await _uploadService.uploadImages(_selectedImages);
+      _selectedImages.clear();
+      _isUploading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _isUploading = false;
+      notifyListeners();
+      return 'Upload failed: ${e.toString()}';
+    }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  void setShowLoader(bool value) {
+    _showLoader = value;
+    notifyListeners();
   }
 }
