@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../landing/providers/auth_provider.dart';
-import '../../landing/services/auth_service.dart';
+import '../landing/providers/auth_provider.dart';
+import '../landing/services/auth_service.dart';
+import 'widgets/profile_option_card.dart';
+import 'widgets/profile_header.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -27,52 +29,13 @@ class ProfilePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profile avatar
-              CircleAvatar(
-                radius: 50.r,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withOpacity(0.1),
-                child: Icon(
-                  Icons.person,
-                  size: 50.w,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-
-              SizedBox(height: 16.h),
-
-              // User name
-              Text(
-                'John Doe',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              SizedBox(height: 8.h),
-
-              // User email
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Text(
-                    authProvider.email.isNotEmpty
-                        ? authProvider.email
-                        : 'user@example.com',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  );
-                },
-              ),
+              // Profile Header
+              const ProfileHeader(),
 
               SizedBox(height: 32.h),
 
               // Profile options
-              _buildProfileOption(
-                context,
+              ProfileOptionCard(
                 icon: Icons.edit,
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
@@ -81,8 +44,7 @@ class ProfilePage extends StatelessWidget {
                 },
               ),
 
-              _buildProfileOption(
-                context,
+              ProfileOptionCard(
                 icon: Icons.notifications_outlined,
                 title: 'Notifications',
                 subtitle: 'Manage your notification preferences',
@@ -91,8 +53,7 @@ class ProfilePage extends StatelessWidget {
                 },
               ),
 
-              _buildProfileOption(
-                context,
+              ProfileOptionCard(
                 icon: Icons.security,
                 title: 'Security',
                 subtitle: 'Change password and security settings',
@@ -101,8 +62,7 @@ class ProfilePage extends StatelessWidget {
                 },
               ),
 
-              _buildProfileOption(
-                context,
+              ProfileOptionCard(
                 icon: Icons.help_outline,
                 title: 'Help & Support',
                 subtitle: 'Get help or contact support',
@@ -111,8 +71,7 @@ class ProfilePage extends StatelessWidget {
                 },
               ),
 
-              _buildProfileOption(
-                context,
+              ProfileOptionCard(
                 icon: Icons.info_outline,
                 title: 'About',
                 subtitle: 'App version and information',
@@ -149,30 +108,6 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileOption(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: EdgeInsets.only(bottom: 12.h),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
       ),
     );
   }
