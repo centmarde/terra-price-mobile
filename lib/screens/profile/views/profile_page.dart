@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../landing/providers/auth_provider.dart';
-import '../landing/services/auth_service.dart';
-import 'widgets/profile_option_card.dart';
-import 'widgets/profile_header.dart';
+import '../../landing/providers/auth_provider.dart';
+import '../../landing/services/auth_service.dart';
+import '../widgets/profile_option_card.dart';
+import '../widgets/profile_header.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {

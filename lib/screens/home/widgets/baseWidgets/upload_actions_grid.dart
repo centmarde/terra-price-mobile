@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'action_card.dart';
+import '../action_card.dart';
 
 class UploadActionsGrid extends StatelessWidget {
   final VoidCallback onCameraPressed;

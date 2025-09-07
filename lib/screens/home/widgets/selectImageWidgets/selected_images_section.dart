@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:io';
 import 'selected_images_grid.dart';
-import 'upload_button.dart';
+import '../uploadImageWidgets/upload_button.dart';
 
 class SelectedImagesSection extends StatelessWidget {
   final List<File> selectedImages;

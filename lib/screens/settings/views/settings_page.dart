@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'widgets/settings_section.dart';
-import 'widgets/settings_option_card.dart';
-import 'widgets/app_info_card.dart';
+import '../widgets/settings_section.dart';
+import '../widgets/settings_option_card.dart';
+import '../widgets/app_info_card.dart';
 
 /// Settings page widget - app settings and preferences
 class SettingsPage extends StatelessWidget {

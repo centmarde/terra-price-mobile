@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../landing/providers/auth_provider.dart';
+import '../../../landing/providers/auth_provider.dart';
 
 class WelcomeSection extends StatelessWidget {
   const WelcomeSection({super.key});

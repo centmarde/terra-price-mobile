@@ -6,14 +6,14 @@ import 'package:provider/provider.dart';
 // Import the new component files
 import 'welcome_section.dart';
 import 'upload_actions_grid.dart';
-import 'selected_images_section.dart';
-import 'image_selection_bottom_sheet.dart';
-import 'file_options_bottom_sheet.dart';
+import '../selectImageWidgets/selected_images_section.dart';
+import '../image_selection_bottom_sheet.dart';
+import '../file_options_bottom_sheet.dart';
 import 'upload_image_loader.dart';
-import '../widgets/home_app_bar.dart';
-import '../widgets/recent_images_bottom_sheet.dart';
-import '../providers/home_provider.dart';
-import '../mixins/snackbar_mixin.dart';
+import 'home_app_bar.dart';
+import '../recent_images_bottom_sheet.dart';
+import '../../providers/home_provider.dart';
+import '../../mixins/snackbar_mixin.dart';
 
 /// Home page widget - main dashboard for authenticated users
 class HomePage extends StatefulWidget {

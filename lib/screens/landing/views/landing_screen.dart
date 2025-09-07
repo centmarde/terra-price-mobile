@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/landing_provider.dart';
-import 'widgets/hero_section.dart';
-import 'widgets/login_form.dart';
-import 'widgets/register_form.dart';
+import '../providers/auth_provider.dart';
+import '../providers/landing_provider.dart';
+import '../widgets/hero_section.dart';
+import '../widgets/login_form.dart';
+import '../widgets/register_form.dart';
 
 /// Landing screen with hero section and authentication forms
 /// Displays app branding and handles user authentication

@@ -3,11 +3,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 
 // Import widget components
-import './price_predicion_card.dart';
-import './property_dashboard_card.dart';
-import './floorplan_analysis_card.dart';
-import './price_trend_chart.dart';
-import './download_report_card.dart';
+import '../../home/widgets/aiResultsWidgets/price_predicion_card.dart';
+import '../../home/widgets/property_dashboard_card.dart';
+import '../../home/widgets/floorplan_analysis_card.dart';
+import '../../home/widgets/aiResultsWidgets/price_trend_chart.dart';
+import '../../home/widgets/download_report_card.dart';
 
 class AIResultsPage extends StatelessWidget {
   const AIResultsPage({super.key});
