@@ -14,13 +14,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => HomeProvider()),
-        ChangeNotifierProvider(
-          create: (context) => ProfileProvider(),
-        ), // Add this
-      ],
+    return ChangeNotifierProvider(
+      create: (context) => ProfileProvider(),
       child: Consumer<HomeProvider>(
         builder: (context, homeProvider, child) {
           return Scaffold(

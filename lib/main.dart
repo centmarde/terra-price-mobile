@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 import 'screens/splash/providers/splash_provider.dart';
 import 'screens/landing/providers/auth_provider.dart';
 import 'screens/landing/providers/landing_provider.dart';
+import 'screens/home/providers/home_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (context) => SplashProvider()),
             ChangeNotifierProvider(create: (context) => AuthProvider()),
             ChangeNotifierProvider(create: (context) => LandingProvider()),
+            ChangeNotifierProvider(create: (context) => HomeProvider()),
           ],
           child: Consumer<AuthStateProvider>(
             builder: (context, authStateProvider, child) {
