@@ -189,7 +189,9 @@ class HomeProvider extends ChangeNotifier {
         final imageUrl = _uploadService.getImageUrl(filePath);
         if (imageUrl != null) {
           print('🔍 Starting Roboflow analysis for: $imageUrl');
-          final result = await RoboflowFetch.analyzeImageWithResult(imageUrl);
+          final result = await RoboflowFetch.analyzeImageWithResult(
+            imageUrl,
+          ); //base Gateway sa roboflow
           print('📊 Roboflow analysis result: $result');
 
           // Log the full result JSON if successful
