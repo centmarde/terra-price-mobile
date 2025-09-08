@@ -6,6 +6,8 @@ import 'package:mime/mime.dart';
 class ImageUploadService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  /// Temporarily uploads raw images for Roboflow analysis
+  /// These images will be deleted after analysis and only processed images will be stored
   Future<List<String>> uploadImages(List<File> images) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) {
@@ -21,12 +23,9 @@ class ImageUploadService {
           'image_${DateTime.now().millisecondsSinceEpoch}_$i$fileExtension';
       final filePath = '$userId/$fileName';
 
-      // Get file size
-      final fileSize = await file.length();
-
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage in ai_results bucket (temporary storage for analysis)
       await _supabase.storage
-          .from('mobile_uploads')
+          .from('ai_results')
           .upload(
             filePath,
             file,
@@ -36,15 +35,6 @@ class ImageUploadService {
               contentType: lookupMimeType(file.path),
             ),
           );
-
-      // Insert record into mobile_uploads table
-      await _supabase.from('mobile_uploads').insert({
-        'user_id': userId,
-        'file_name': fileName,
-        'file_path': filePath,
-        'file_size': fileSize,
-        'status': 'uploaded',
-      });
 
       uploadedFilePaths.add(filePath);
     }
@@ -72,9 +62,6 @@ class ImageUploadService {
       final fileName = 'ai_result_${sessionId}_$i$fileExtension';
       final filePath = '$userId/$fileName';
 
-      // Get file size
-      final fileSize = await file.length();
-
       // Upload to Supabase Storage in ai_results bucket
       await _supabase.storage
           .from('ai_results')
@@ -88,16 +75,6 @@ class ImageUploadService {
             ),
           );
 
-      // Insert record into ai_results table
-      await _supabase.from('ai_results').insert({
-        'user_id': userId,
-        'file_name': fileName,
-        'file_path': filePath,
-        'file_size': fileSize,
-        'analysis_id': sessionId,
-        'status': 'uploaded',
-      });
-
       uploadedFilePaths.add(filePath);
     }
 
@@ -106,46 +83,62 @@ class ImageUploadService {
 
   Future<void> updateUploadStatus(String filePath, String status) async {
     try {
-      await _supabase
-          .from('mobile_uploads')
-          .update({
-            'status': status,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('file_path', filePath);
+      // Convert filePath to full URL format that's stored in the database
+      print('testing');
     } catch (e) {
       print('Failed to update status: $e');
     }
   }
 
-  /// Update status for AI results uploads
-  Future<void> updateAiResultStatus(
-    String filePath,
-    String status, {
-    Map<String, dynamic>? analysisData,
-  }) async {
+  /// Store metadata for processed images from Roboflow analysis
+  /// Only stores metadata for the last processed image to avoid duplicates
+  Future<void> storeProcessedImageMetadata(
+    List<String> processedFilePaths,
+    String analysisId,
+    Map<String, dynamic> roboflowData,
+  ) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    if (processedFilePaths.isEmpty) {
+      print('⚠️ No processed file paths to store');
+      return;
+    }
+
     try {
-      final updateData = <String, dynamic>{
-        'status': status,
+      // Store only the last processed image to avoid duplicates
+      final lastFilePath = processedFilePaths.last;
+      final fileName = lastFilePath.split('/').last;
+      final fullUrl =
+          'https://gqxhltrjxuiuyveiqtsf.supabase.co/storage/v1/object/public/ai_results/$lastFilePath';
+
+      // Insert metadata record for the last processed image
+      await _supabase.from('mobile_uploads').insert({
+        'user_id': userId,
+        'file_name': fileName,
+        'file_path': fullUrl,
+        'file_size': 0, // Size not available for processed images
+        'status': 'processed',
+        'roboflow_data': roboflowData, // jsonB Store the full analysis data
+        'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      };
+      });
 
-      if (analysisData != null) {
-        updateData['analysis_data'] = analysisData;
-      }
-
-      await _supabase
-          .from('ai_results')
-          .update(updateData)
-          .eq('file_path', filePath);
+      print('📝 Stored metadata for last processed image: $fileName');
+      print(
+        '🔗 Total processed images: ${processedFilePaths.length}, stored: 1 (last)',
+      );
     } catch (e) {
-      print('Failed to update AI result status: $e');
+      print('❌ Failed to store processed image metadata: $e');
+      throw e;
     }
   }
 
   String? getImageUrl(String filePath) {
     try {
-      return _supabase.storage.from('mobile_uploads').getPublicUrl(filePath);
+      return _supabase.storage.from('ai_results').getPublicUrl(filePath);
     } catch (e) {
       print('Failed to get image URL: $e');
       return null;
@@ -163,19 +156,22 @@ class ImageUploadService {
   }
 
   Future<void> deleteUpload(String filePath) async {
-    // Delete from storage
-    await _supabase.storage.from('mobile_uploads').remove([filePath]);
-
-    // Delete from database
-    await _supabase.from('mobile_uploads').delete().eq('file_path', filePath);
-  }
-
-  /// Delete AI result upload
-  Future<void> deleteAiResult(String filePath) async {
-    // Delete from storage
+    // Delete from storage (ai_results bucket where files are actually stored)
     await _supabase.storage.from('ai_results').remove([filePath]);
 
-    // Delete from database
-    await _supabase.from('ai_results').delete().eq('file_path', filePath);
+    // Delete from database (mobile_uploads table where metadata is stored)
+    await _supabase
+        .from('mobile_uploads')
+        .delete()
+        .eq(
+          'file_path',
+          'https://gqxhltrjxuiuyveiqtsf.supabase.co/storage/v1/object/public/ai_results/$filePath',
+        );
+  }
+
+  /// Delete AI result upload (only from storage bucket, no table)
+  Future<void> deleteAiResult(String filePath) async {
+    // Delete from storage bucket only (no ai_results table exists)
+    await _supabase.storage.from('ai_results').remove([filePath]);
   }
 }
