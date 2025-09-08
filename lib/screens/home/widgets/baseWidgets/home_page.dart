@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 // Import the new component files
 import 'welcome_section.dart';
 import 'upload_actions_grid.dart';
-import '../image_selection_bottom_sheet.dart';
+import '../selectImageWidgets/image_selection_bottom_sheet.dart';
 import '../uploadImageWidgets/file_options_bottom_sheet.dart';
 import 'upload_image_loader.dart';
 import 'home_app_bar.dart';
