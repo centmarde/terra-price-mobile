@@ -1,14 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:convert';
 import '../services/image_picker_service.dart';
 import '../services/image_upload_service.dart';
 import '../../aiResult/services/roboflow_fetch.dart';
+import '../services/roboflow_api_service.dart';
 
 class HomeProvider extends ChangeNotifier {
   final ImagePickerService _imagePickerService = ImagePickerService();
   final ImageUploadService _uploadService = ImageUploadService();
+  final RoboflowApiService _roboflowService = RoboflowApiService();
   final PageController _pageController = PageController();
 
   // Navigation properties
@@ -184,26 +185,14 @@ class HomeProvider extends ChangeNotifier {
         _selectedImages,
       );
 
-      // Analyze each uploaded image with Roboflow
-      for (String filePath in uploadedFilePaths) {
-        final imageUrl = _uploadService.getImageUrl(filePath);
-        if (imageUrl != null) {
-          print('🔍 Starting Roboflow analysis for: $imageUrl');
-          final result = await RoboflowFetch.analyzeImageWithResult(
-            imageUrl,
-          ); //base Gateway sa roboflow
-          print('📊 Roboflow analysis result: $result');
+      // Analyze uploaded images with Roboflow using the service
+      final results = await _roboflowService.analyzeUploadedImages(
+        uploadedFilePaths,
+      );
 
-          // Log the full result JSON if successful
-          if (result.success && result.data != null) {
-            print('🚀 LIVE ROBOFLOW API JSON RESPONSE:');
-            print('=' * 60);
-            const encoder = JsonEncoder.withIndent('  ');
-            final prettyJson = encoder.convert(result.data!);
-            print(prettyJson);
-            print('=' * 60);
-          }
-        }
+      // Log results
+      for (var result in results) {
+        print('� Roboflow analysis result: $result');
       }
 
       _selectedImages.clear();
@@ -271,42 +260,8 @@ class HomeProvider extends ChangeNotifier {
       _isAnalysisInProgress = true;
       notifyListeners();
 
-      // Upload the single image first
-      print('📤 Uploading image to cloud storage...');
-      final uploadedPaths = await _uploadService.uploadImages([imageFile]);
-      print('✅ Image upload completed. Uploaded paths: $uploadedPaths');
-
-      if (uploadedPaths.isEmpty) {
-        print('❌ No files were uploaded successfully');
-        _roboflowAnalysisFailed = true;
-        _roboflowErrorMessage = 'Failed to upload image to cloud storage';
-        _showLoader = false;
-        _isAnalysisInProgress = false;
-        notifyListeners();
-        _navigateToRoute('/ai_results_page');
-        return 'Failed to upload image to cloud storage';
-      }
-
-      final imageUrl = _uploadService.getImageUrl(uploadedPaths.first);
-      if (imageUrl == null) {
-        print(
-          '❌ Failed to generate image URL from uploaded path: ${uploadedPaths.first}',
-        );
-        _roboflowAnalysisFailed = true;
-        _roboflowErrorMessage = 'Failed to generate image URL for analysis';
-        _showLoader = false;
-        _isAnalysisInProgress = false;
-        notifyListeners();
-        _navigateToRoute('/ai_results_page');
-        return 'Failed to generate image URL for analysis';
-      }
-
-      print('🌐 Generated image URL for Roboflow: $imageUrl');
-      print('🔍 Calling Roboflow API and waiting for result...');
-
-      // Wait for the Roboflow API result before proceeding
-      final result = await RoboflowFetch.analyzeImageWithResult(imageUrl);
-      print('📊 Roboflow API response received: $result');
+      // Use the RoboflowApiService to handle the analysis
+      final result = await _roboflowService.analyzeImage(imageFile);
 
       // Process the result regardless of success or failure
       if (result.success && result.data != null) {
@@ -317,27 +272,6 @@ class HomeProvider extends ChangeNotifier {
         );
         print('🗂️ Stored data keys: ${result.data!.keys.toList()}');
 
-        // Enhanced JSON logging for live API response
-        print('🚀 LIVE ROBOFLOW API JSON RESPONSE LOGGING:');
-        print('=' * 60);
-        const encoder = JsonEncoder.withIndent('  ');
-        final prettyJson = encoder.convert(result.data!);
-        print(prettyJson);
-        print('=' * 60);
-
-        // Log specific data we're looking for
-        if (result.data!.containsKey('outputs') &&
-            result.data!['outputs'] is List &&
-            (result.data!['outputs'] as List).isNotEmpty) {
-          final firstOutput = result.data!['outputs'][0];
-          if (firstOutput.containsKey('label_vis_model_output')) {
-            print('🏷️ Found label_vis_model_output in response');
-          }
-          if (firstOutput.containsKey('bbox_vis_model_output')) {
-            print('📦 Found bbox_vis_model_output in response');
-          }
-        }
-
         // Clear failure state on success
         _roboflowAnalysisFailed = false;
         _roboflowErrorMessage = null;
@@ -346,9 +280,7 @@ class HomeProvider extends ChangeNotifier {
       } else {
         // Failure case - set failure state but still navigate to show the failure
         print('❌ Roboflow analysis failed or returned no data');
-        print(
-          '📄 Result details: success=${result.success}, data=${result.data}, error=${result.error}',
-        );
+        print('📄 Result details: $result');
 
         _roboflowAnalysisFailed = true;
         _roboflowErrorMessage =
