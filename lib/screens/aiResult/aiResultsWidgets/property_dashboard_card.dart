@@ -32,9 +32,9 @@ class PropertyDashboardCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _dashboardTile(Icons.home, 'Size', size),
-                _dashboardTile(Icons.location_city, 'Rooms', rooms),
+                _dashboardTile(Icons.window, 'Windows', rooms),
                 _dashboardTile(Icons.door_front_door, 'Doors', doors),
-                _dashboardTile(Icons.chair, 'Furnitures', furnitures),
+                _dashboardTile(Icons.devices_other, 'Etc.', furnitures),
               ],
             ),
           ],
