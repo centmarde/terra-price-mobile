@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Import widget components
+// Widgets
 import '../aiResultsWidgets/price_predicion_card.dart';
 import '../aiResultsWidgets/property_dashboard_card.dart';
 import '../aiResultsWidgets/floorplan_analysis_card.dart';
 import '../aiResultsWidgets/price_trend_chart.dart';
-import '../services/roboflow_data_parser.dart';
 import '../aiResultsWidgets/download_report_card.dart';
+
+// Data parsing
+import '../services/roboflow_data_parser.dart';
+
+// Controllers / Providers
 import '../../home/providers/home_provider.dart';
+import '../controllers/floorplan_persist_controller.dart';
+import '../services/floorplan_persist_service.dart';
 
 class AIResultsPage extends StatefulWidget {
   const AIResultsPage({super.key});
@@ -25,52 +32,48 @@ class _AIResultsPageState extends State<AIResultsPage> {
   String? errorMessage;
   late HomeProvider homeProvider;
 
+  // Track the last base64 hash so we can trigger persistence only when new result arrives
+  int? _lastBase64Hash;
+  bool _snackShownForPersistError = false;
+  bool _snackShownForPersistSuccess = false;
+
   @override
   void initState() {
     super.initState();
     homeProvider = Provider.of<HomeProvider>(context, listen: false);
-    print('🚀 AIResultsPage initialized');
+    debugPrint('🚀 AIResultsPage initialized');
     _loadRoboflowData();
-
-    // Listen for analysis completion
     _startListeningForAnalysisCompletion();
   }
 
   void _startListeningForAnalysisCompletion() {
-    // If analysis is still in progress, wait for it to complete
     if (homeProvider.isAnalysisInProgress) {
-      print('⏳ Analysis still in progress, setting up listener...');
-
-      // Check periodically for analysis completion
+      debugPrint('⏳ Analysis in progress... starting poll');
       _checkAnalysisStatus();
     }
   }
 
   void _checkAnalysisStatus() {
     Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        if (!homeProvider.isAnalysisInProgress) {
-          print('✅ Analysis completed, refreshing data...');
-          _loadRoboflowData();
-        } else {
-          print('⏳ Still waiting for analysis to complete...');
-          _checkAnalysisStatus(); // Continue checking
-        }
+      if (!mounted) return;
+      if (!homeProvider.isAnalysisInProgress) {
+        debugPrint('✅ Analysis finished, reloading');
+        _loadRoboflowData();
+      } else {
+        debugPrint('⏳ Still analyzing...');
+        _checkAnalysisStatus();
       }
     });
   }
 
   Future<void> _loadRoboflowData() async {
     try {
-      print('🔄 Loading Roboflow data in AI Results page...');
-
-      // Get data from HomeProvider (if user just took a photo)
+      debugPrint('🔄 Loading Roboflow data...');
       final providerData = homeProvider.latestRoboflowResult;
       final analysisHasFailed = homeProvider.roboflowAnalysisFailed;
-      final isStillAnalyzing = homeProvider.isAnalysisInProgress;
+      final stillAnalyzing = homeProvider.isAnalysisInProgress;
 
-      if (isStillAnalyzing) {
-        print('⏳ Analysis still in progress, showing loading state...');
+      if (stillAnalyzing) {
         setState(() {
           roboflowData = null;
           isLoading = true;
@@ -80,9 +83,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
       }
 
       if (analysisHasFailed) {
-        print('⚠️ Analysis failed according to HomeProvider');
-        print('❌ Error message: ${homeProvider.roboflowErrorMessage}');
-
         setState(() {
           roboflowData = null;
           isLoading = false;
@@ -92,51 +92,20 @@ class _AIResultsPageState extends State<AIResultsPage> {
       }
 
       if (providerData != null) {
-        print('✅ Found live Roboflow data from HomeProvider');
-        print('📋 Live data keys: ${providerData.keys.toList()}');
-
-        // Log the complete data structure
-        print('🔍 Complete live Roboflow data:');
-        print(providerData.toString());
-
-        // Log specific data we're looking for
-        if (providerData.containsKey('outputs') &&
-            providerData['outputs'] is List &&
-            (providerData['outputs'] as List).isNotEmpty) {
-          final firstOutput = providerData['outputs'][0];
-          if (firstOutput.containsKey('label_vis_model_output')) {
-            final labelData = firstOutput['label_vis_model_output'];
-            print(
-              '🏷️ Found label_vis_model_output: type=${labelData['type']}',
-            );
-            if (labelData['value'] != null) {
-              print(
-                '🖼️ Label image data length: ${labelData['value'].toString().length} characters',
-              );
-            }
-          }
-        }
-
+        debugPrint('✅ Roboflow data found. Keys: ${providerData.keys}');
         setState(() {
           roboflowData = providerData;
           isLoading = false;
           errorMessage = null;
         });
-        return;
+      } else {
+        setState(() {
+          roboflowData = null;
+          isLoading = false;
+          errorMessage = 'No analysis data available';
+        });
       }
-
-      print(
-        '⚠️ No live data available from HomeProvider and no analysis failure or in progress',
-      );
-
-      // No data available and no failure - this shouldn't happen in normal flow
-      setState(() {
-        roboflowData = null;
-        isLoading = false;
-        errorMessage = 'No analysis data available';
-      });
     } catch (e) {
-      print('💥 Exception loading Roboflow data: $e');
       setState(() {
         errorMessage = 'Failed to load AI analysis data: $e';
         isLoading = false;
@@ -144,88 +113,200 @@ class _AIResultsPageState extends State<AIResultsPage> {
     }
   }
 
+  // ---- Persistence trigger logic ----
+  void _maybeTriggerPersistence({
+    required String? labelBase64,
+    required List<String> insights,
+  }) {
+    if (labelBase64 == null || labelBase64.isEmpty) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      debugPrint('⚠️ No authenticated user; skipping persistence.');
+      return;
+    }
+
+    final hash = labelBase64.hashCode;
+    final persistCtrl = context.read<FloorplanPersistController>();
+
+    // If new base64 -> reset and persist
+    if (_lastBase64Hash != hash) {
+      debugPrint('🆕 New floorplan base64 detected, triggering persistence');
+      _lastBase64Hash = hash;
+      persistCtrl.markNewImageSignature(hash);
+      persistCtrl.persistOnce(
+        userId: user.id,
+        base64Data: labelBase64,
+        insights: insights,
+        analysisId: null,
+        mode: FloorplanPersistMode.rawBase64,
+      );
+    }
+  }
+
+  void _maybeShowPersistSnackbars(FloorplanPersistController ctrl) {
+    if (!mounted) return;
+    if (!ctrl.saving && ctrl.error != null && !_snackShownForPersistError) {
+      _snackShownForPersistError = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Floorplan save failed (${ctrl.stage ?? 'unknown'}): ${ctrl.error}',
+          ),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    } else if (!ctrl.saving &&
+        ctrl.imageUrl != null &&
+        !_snackShownForPersistSuccess) {
+      _snackShownForPersistSuccess = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Floorplan persisted successfully'),
+          backgroundColor: Colors.green[700],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          toolbarHeight: 80,
-          backgroundColor: Colors.green,
-          title: const Text('AI Results'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/home'),
-          ),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.green),
-        ),
-      );
-    }
+    return ChangeNotifierProvider<FloorplanPersistController>(
+      create: (_) => FloorplanPersistController(),
+      builder: (context, _) {
+        final persistCtrl = context.watch<FloorplanPersistController>();
 
-    if (errorMessage != null) {
-      return Scaffold(
-        appBar: AppBar(
-          toolbarHeight: 80,
-          backgroundColor: Colors.green,
-          title: const Text('AI Results'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/home'),
-          ),
-        ),
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                const SizedBox(height: 16),
-                Text(
-                  errorMessage!,
-                  style: const TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loadRoboflowData,
-                  child: const Text('Retry'),
-                ),
-              ],
+        if (isLoading) {
+          return _buildScaffold(
+            body: const Center(
+              child: CircularProgressIndicator(color: Colors.green),
             ),
+          );
+        }
+
+        if (errorMessage != null) {
+          return _buildScaffold(
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _loadRoboflowData,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Extract insights / metrics / image
+        final insights = roboflowData != null
+            ? RoboflowDataParser.extractInsights(roboflowData!)
+            : <String>[];
+
+        final propertyMetrics = roboflowData != null
+            ? RoboflowDataParser.extractPropertyMetrics(roboflowData!)
+            : {
+                'size': '120 sqm',
+                'rooms': '3',
+                'doors': '5',
+                'furnitures': '10',
+              };
+
+        final labelImageData = roboflowData != null
+            ? RoboflowDataParser.extractLabelVisualizationImage(roboflowData!)
+            : null;
+
+        // Trigger persistence (post-frame to avoid setState conflicts)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _maybeTriggerPersistence(
+            labelBase64: labelImageData,
+            insights: insights,
+          );
+          _maybeShowPersistSnackbars(persistCtrl);
+        });
+
+        // Mock price trend
+        final spots = <FlSpot>[
+          FlSpot(1, 480),
+          FlSpot(2, 490),
+          FlSpot(3, 500),
+          FlSpot(4, 510),
+          FlSpot(5, 505),
+        ];
+        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+
+        return _buildScaffold(
+          body: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              PricePredictionCard(price: '\$500,000', confidence: '92%'),
+              const SizedBox(height: 24),
+              PropertyDashboardCard(
+                size: propertyMetrics['size']!,
+                rooms: propertyMetrics['rooms']!,
+                doors: propertyMetrics['doors']!,
+                furnitures: propertyMetrics['furnitures']!,
+              ),
+              const SizedBox(height: 24),
+              FloorplanAnalysisCard(
+                insights: insights,
+                roboflowImageData: labelImageData,
+                capturedImage: homeProvider.capturedImage,
+                hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
+                errorMessage: homeProvider.roboflowErrorMessage,
+                onRetry: () async {
+                  setState(() {
+                    isLoading = true;
+                  });
+                  final error = await homeProvider.retryRoboflowAnalysis();
+                  if (!mounted) return;
+                  if (error != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Retry failed: $error')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Analysis completed successfully!'),
+                      ),
+                    );
+                  }
+                  await _loadRoboflowData();
+                },
+                persistedImageUrl: persistCtrl.imageUrl,
+                isSavingPersisted: persistCtrl.saving,
+                persistError: persistCtrl.error,
+              ),
+              const SizedBox(height: 24),
+              PriceTrendChart(spots: spots, months: months),
+              const SizedBox(height: 24),
+              DownloadReportCard(
+                onDownload: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mock report downloaded!')),
+                  );
+                },
+              ),
+            ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
+  }
 
-    // Get HomeProvider reference
-    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-
-    // Extract data from Roboflow response
-    final insights = roboflowData != null
-        ? RoboflowDataParser.extractInsights(roboflowData!)
-        : RoboflowDataParser.extractInsights({});
-
-    final propertyMetrics = roboflowData != null
-        ? RoboflowDataParser.extractPropertyMetrics(roboflowData!)
-        : RoboflowDataParser.extractPropertyMetrics({});
-
-    final labelImageData = roboflowData != null
-        ? RoboflowDataParser.extractLabelVisualizationImage(roboflowData!)
-        : null;
-
-    // Mock data for trend graph (would be replaced with real data in production)
-    final List<FlSpot> spots = [
-      FlSpot(1, 480),
-      FlSpot(2, 490),
-      FlSpot(3, 500),
-      FlSpot(4, 510),
-      FlSpot(5, 505),
-    ];
-
-    final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-
+  Scaffold _buildScaffold({required Widget body}) {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80,
@@ -236,67 +317,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
           onPressed: () => context.go('/home'),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          // Price Prediction Section
-          PricePredictionCard(price: '\$500,000', confidence: '92%'),
-          const SizedBox(height: 24),
-
-          // Dashboard Section
-          PropertyDashboardCard(
-            size: propertyMetrics['size']!,
-            rooms: propertyMetrics['rooms']!,
-            doors: propertyMetrics['doors']!,
-            furnitures: propertyMetrics['furnitures']!,
-          ),
-          const SizedBox(height: 24),
-
-          // Floorplan Analysis Section
-          FloorplanAnalysisCard(
-            insights: insights,
-            roboflowImageData: labelImageData,
-            capturedImage: homeProvider.capturedImage,
-            hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
-            errorMessage: homeProvider.roboflowErrorMessage,
-            onRetry: () async {
-              setState(() {
-                isLoading = true;
-              });
-
-              final error = await homeProvider.retryRoboflowAnalysis();
-              if (error != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Retry failed: $error')));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Analysis completed successfully!'),
-                  ),
-                );
-              }
-
-              // Refresh the page data after retry
-              await _loadRoboflowData();
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Price Trend Chart Section
-          PriceTrendChart(spots: spots, months: months),
-          const SizedBox(height: 24),
-
-          // Download Report Section
-          DownloadReportCard(
-            onDownload: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock report downloaded!')),
-              );
-            },
-          ),
-        ],
-      ),
+      body: body,
     );
   }
 }
