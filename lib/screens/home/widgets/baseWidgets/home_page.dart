@@ -10,7 +10,7 @@ import '../selectImageWidgets/image_selection_bottom_sheet.dart';
 import '../uploadImageWidgets/file_options_bottom_sheet.dart';
 import 'upload_image_loader.dart';
 import 'home_app_bar.dart';
-import '../recent_images_bottom_sheet.dart';
+import 'recent_images_bottom_sheet.dart';
 import '../../providers/home_provider.dart';
 import '../../mixins/snackbar_mixin.dart';
 
