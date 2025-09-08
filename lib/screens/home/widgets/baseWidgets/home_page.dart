@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'welcome_section.dart';
 import 'upload_actions_grid.dart';
 import '../image_selection_bottom_sheet.dart';
-import '../file_options_bottom_sheet.dart';
+import '../uploadImageWidgets/file_options_bottom_sheet.dart';
 import 'upload_image_loader.dart';
 import 'home_app_bar.dart';
 import '../recent_images_bottom_sheet.dart';
