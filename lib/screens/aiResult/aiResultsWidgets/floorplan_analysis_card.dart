@@ -1,18 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
-/// FloorplanAnalysisCard now supports:
-/// - persistedImageUrl: a stored/public URL (highest priority display)
-/// - isSavingPersisted: shows an uploading overlay
-/// - persistError: optional (shows a small warning badge if provided)
-///
-/// Image priority:
-///   1. persistedImageUrl (network)
-///   2. roboflowImageData (base64)
-///   3. capturedImage (local file)
-///   4. Failure widget
+/// Enhanced:
+/// - Asynchronous decode of roboflowImageData
+/// - Layering overlay (base64) on top of capturedImage if both exist
+/// - Optional composition fallback
+/// - Loading indicator while decoding
+/// - Shows failure panel if decode error
+/// - Supports persistedImageUrl / saving states (leave null if unused)
 class FloorplanAnalysisCard extends StatelessWidget {
   final List<String> insights;
   final String? roboflowImageData;
@@ -21,7 +18,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
   final String? errorMessage;
   final VoidCallback? onRetry;
 
-  // New
+  // From previous enhancement (you can keep passing null if not persisting yet)
   final String? persistedImageUrl;
   final bool isSavingPersisted;
   final String? persistError;
@@ -51,9 +48,9 @@ class FloorplanAnalysisCard extends StatelessWidget {
           children: [
             _buildHeader(),
             const SizedBox(height: 12),
-            _buildImageSection(context),
+            _buildImageArea(context),
             const SizedBox(height: 12),
-            _buildInsightsSection(context),
+            _buildInsights(context),
           ],
         ),
       ),
@@ -73,21 +70,17 @@ class FloorplanAnalysisCard extends StatelessWidget {
         const Spacer(),
         if (persistError != null && !hasAnalysisFailed)
           Tooltip(
-            message: 'Persistence failed: $persistError',
-            child: Icon(
-              Icons.warning_amber_rounded,
-              size: 20,
-              color: Colors.orange[700],
-            ),
+            message: 'Save failed: $persistError',
+            child: Icon(Icons.warning_amber, size: 20, color: Colors.orange),
           ),
       ],
     );
   }
 
-  // ---------------- Image Section ----------------
-  Widget _buildImageSection(BuildContext context) {
+  // ---------------- Image Area ----------------
+  Widget _buildImageArea(BuildContext context) {
     return Container(
-      height: 200,
+      height: 220,
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -103,20 +96,21 @@ class FloorplanAnalysisCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (hasAnalysisFailed) _buildFailureWidget() else _buildBestImage(),
-            _buildStatusBadge(),
+            if (hasAnalysisFailed)
+              _buildFailureWidget()
+            else
+              _buildPrimaryContent(),
+
+            // Badge
+            Positioned(top: 8, right: 8, child: _buildStatusBadge()),
 
             if (isSavingPersisted && !hasAnalysisFailed)
               Container(
                 color: Colors.black.withOpacity(0.35),
                 child: const Center(
-                  child: SizedBox(
-                    height: 40,
-                    width: 40,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
                   ),
                 ),
               ),
@@ -126,82 +120,113 @@ class FloorplanAnalysisCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBestImage() {
-    // Priority: persisted -> base64 -> captured -> failure
+  Widget _buildPrimaryContent() {
+    // Priority #1: persisted network image
     if (persistedImageUrl != null) {
       return Image.network(
         persistedImageUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallbackAfterNetworkError(),
+        errorBuilder: (_, __, ___) => _fallbackLayeredOrFailure(),
       );
     }
 
+    // If we have Roboflow overlay (base64) => decode async
     if (roboflowImageData != null) {
-      try {
-        final bytes = base64Decode(
-          roboflowImageData!.contains(',')
-              ? roboflowImageData!.split(',').last
-              : roboflowImageData!,
+      return FutureBuilder<Uint8List?>(
+        future: _decodeBase64(roboflowImageData!),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: SizedBox(
+                height: 38,
+                width: 38,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data == null) {
+            return _fallbackLayeredOrFailure();
+          }
+
+          final overlayBytes = snapshot.data!;
+
+          // If we also have captured image, layer them
+          if (capturedImage != null) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.file(
+                  capturedImage!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _buildFailureWidget(),
+                ),
+                // Overlay (annotation)
+                Image.memory(
+                  overlayBytes,
+                  fit: BoxFit.contain, // contain to keep annotation coords
+                  errorBuilder: (_, __, ___) =>
+                      Image.file(capturedImage!, fit: BoxFit.cover),
+                ),
+              ],
+            );
+          }
+
+          // Otherwise just show overlay as a normal image
+          return Image.memory(
+            overlayBytes,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _fallbackLayeredOrFailure(),
+          );
+        },
+      );
+    }
+
+    // Fallback to captured image only
+    if (capturedImage != null) {
+      return Image.file(
+        capturedImage!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFailureWidget(),
+      );
+    }
+
+    return _buildFailureWidget();
+  }
+
+  Widget _fallbackLayeredOrFailure() {
+    if (capturedImage != null) {
+      return Image.file(
+        capturedImage!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFailureWidget(),
+      );
+    }
+    return _buildFailureWidget();
+  }
+
+  Future<Uint8List?> _decodeBase64(String raw) async {
+    try {
+      final cleaned = raw.contains(',') ? raw.split(',').last : raw;
+      // Basic integrity check: length multiple of 4
+      if (cleaned.length % 4 != 0) {
+        debugPrint(
+          '[FloorplanCard] Base64 length not multiple of 4 (truncated?)',
         );
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _fallbackAfterBase64Error(),
-        );
-      } catch (_) {
-        return _fallbackAfterBase64Error();
       }
-    }
-
-    if (capturedImage != null) {
-      return Image.file(
-        capturedImage!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFailureWidget(),
-      );
-    }
-
-    return _buildFailureWidget();
-  }
-
-  Widget _fallbackAfterNetworkError() {
-    if (roboflowImageData != null) {
-      try {
-        final bytes = base64Decode(
-          roboflowImageData!.contains(',')
-              ? roboflowImageData!.split(',').last
-              : roboflowImageData!,
+      final bytes = base64Decode(cleaned);
+      if (bytes.length < 1000) {
+        debugPrint(
+          '[FloorplanCard] Decoded very small image (${bytes.length} bytes). May be empty overlay.',
         );
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => capturedImage != null
-              ? Image.file(capturedImage!, fit: BoxFit.cover)
-              : _buildFailureWidget(),
-        );
-      } catch (_) {}
+      }
+      return bytes;
+    } catch (e) {
+      debugPrint('[FloorplanCard] base64 decode error: $e');
+      return null;
     }
-    if (capturedImage != null) {
-      return Image.file(
-        capturedImage!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFailureWidget(),
-      );
-    }
-    return _buildFailureWidget();
   }
 
-  Widget _fallbackAfterBase64Error() {
-    if (capturedImage != null) {
-      return Image.file(
-        capturedImage!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFailureWidget(),
-      );
-    }
-    return _buildFailureWidget();
-  }
-
+  // ---------------- Badge ----------------
   Widget _buildStatusBadge() {
     Color color;
     String text;
@@ -229,45 +254,43 @@ class FloorplanAnalysisCard extends StatelessWidget {
       icon = Icons.help_outline;
     }
 
-    return Positioned(
-      top: 8,
-      right: 8,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.4),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.45),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: Colors.white),
-            const SizedBox(width: 5),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // ---------------- Insights Section ----------------
-  Widget _buildInsightsSection(BuildContext context) {
+  // ---------------- Insights ----------------
+  Widget _buildInsights(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: hasAnalysisFailed ? Colors.red[50] : Colors.green[50],
@@ -284,17 +307,18 @@ class FloorplanAnalysisCard extends StatelessWidget {
             hasAnalysisFailed ? 'Analysis Status:' : 'Key Insights:',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: hasAnalysisFailed ? Colors.red[800] : Colors.green[800],
             ),
           ),
           const SizedBox(height: 8),
           if (hasAnalysisFailed)
-            ..._getFailureInsights().map(_failureInsightItem)
+            ..._failureInsightTexts().map(_failureInsightItem)
           else if (insights.isEmpty)
             Text(
-              'No insights available.',
+              'No insights generated.',
               style: TextStyle(
+                fontSize: 14,
                 color: Colors.green[700],
                 fontStyle: FontStyle.italic,
               ),
@@ -310,10 +334,6 @@ class FloorplanAnalysisCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[600],
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
               ),
             ),
           ],
@@ -325,10 +345,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
   // ---------------- Failure Widget ----------------
   Widget _buildFailureWidget() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        border: Border.all(color: Colors.red[300]!, width: 1),
-      ),
+      color: Colors.red[50],
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -338,7 +355,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
               Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
               const SizedBox(height: 10),
               Text(
-                'Analysis Failed',
+                'Analysis Unavailable',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -347,8 +364,12 @@ class FloorplanAnalysisCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                errorMessage ?? 'Unable to analyze the image with Roboflow AI',
-                style: TextStyle(fontSize: 14, color: Colors.red[600]),
+                errorMessage ?? 'No AI visualization could be produced.',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: Colors.red[600],
+                  height: 1.3,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -360,15 +381,12 @@ class FloorplanAnalysisCard extends StatelessWidget {
     );
   }
 
-  // ---------------- Failure Helpers ----------------
-  List<String> _getFailureInsights() {
-    return [
-      '❌ Unable to connect to Roboflow AI service',
-      '❌ Image analysis could not be completed',
-      '⚠️ Please check your internet connection',
-      '🔄 Try again or use a different image',
-    ];
-  }
+  List<String> _failureInsightTexts() => [
+    '❌ Unable to complete AI floorplan analysis.',
+    '⚠️ Check your internet connection.',
+    '🧪 The image may be unsupported or low quality.',
+    '🔄 Try again or capture a clearer photo.',
+  ];
 
   Widget _failureInsightItem(String text) {
     return Padding(
@@ -383,9 +401,28 @@ class FloorplanAnalysisCard extends StatelessWidget {
   Widget _insightItem(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 14, color: Colors.green[700], height: 1.3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.green[700],
+              height: 1.3,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.green[700],
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
