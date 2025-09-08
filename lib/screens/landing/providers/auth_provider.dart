@@ -117,6 +117,7 @@ class AuthProvider extends ChangeNotifier {
       if (result.isSuccess) {
         _setSuccess(result.message);
         _clearForm();
+        // The AuthStateProvider will automatically handle the redirect
       } else {
         _setError(result.message);
       }
@@ -148,6 +149,7 @@ class AuthProvider extends ChangeNotifier {
       if (result.isSuccess) {
         _setSuccess(result.message);
         _clearForm();
+        // The AuthStateProvider will automatically handle the redirect after email confirmation
       } else {
         _setError(result.message);
       }

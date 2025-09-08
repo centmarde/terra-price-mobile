@@ -29,7 +29,7 @@ android {
         applicationId = "com.example.nutriplan"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23  // Updated from flutter.minSdkVersion to meet Firebase Auth requirements
+        minSdk = flutter.minSdkVersion  // Updated from flutter.minSdkVersion to meet Firebase Auth requirements
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
