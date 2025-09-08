@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/floorplan_persist_service.dart';
 
+/// Controller that persists a floorplan visualization only once per unique image.
 class FloorplanPersistController extends ChangeNotifier {
   final FloorplanPersistService _service;
   bool saving = false;
@@ -8,13 +9,25 @@ class FloorplanPersistController extends ChangeNotifier {
   String? stage;
   String? imageUrl;
   Map<String, dynamic>? dbRow;
+
   bool _attempted = false;
+  int? _lastSignature; // hash of base64 (or external signature)
 
   bool get hasPersisted => imageUrl != null;
   bool get attempted => _attempted;
+  int? get lastSignature => _lastSignature;
 
   FloorplanPersistController({FloorplanPersistService? service})
     : _service = service ?? FloorplanPersistService();
+
+  /// Provide a signature (e.g., base64.hashCode) before calling persistOnce.
+  /// If it differs from the stored signature, controller resets automatically.
+  void markNewImageSignature(int signature) {
+    if (_lastSignature != signature) {
+      reset();
+      _lastSignature = signature;
+    }
+  }
 
   Future<void> persistOnce({
     required String userId,
@@ -45,6 +58,7 @@ class FloorplanPersistController extends ChangeNotifier {
       error = result.error;
       stage = result.stage;
     }
+
     saving = false;
     notifyListeners();
   }
@@ -56,6 +70,5 @@ class FloorplanPersistController extends ChangeNotifier {
     imageUrl = null;
     dbRow = null;
     _attempted = false;
-    notifyListeners();
   }
 }
