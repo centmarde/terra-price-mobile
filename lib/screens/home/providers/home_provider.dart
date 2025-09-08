@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:convert';
 import '../services/image_picker_service.dart';
 import '../services/image_upload_service.dart';
-import '../../aiResult/aiResultsWidgets/roboflow_fetch.dart';
+import '../../aiResult/services/roboflow_fetch.dart';
 
 class HomeProvider extends ChangeNotifier {
   final ImagePickerService _imagePickerService = ImagePickerService();
