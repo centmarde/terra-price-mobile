@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 
 // Import widget components
 import '../aiResultsWidgets/price_predicion_card.dart';
@@ -11,6 +12,7 @@ import '../aiResultsWidgets/price_trend_chart.dart';
 import '../services/roboflow_data_parser.dart';
 import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
+import '../services/supabase_data_service.dart';
 
 class AIResultsPage extends StatefulWidget {
   const AIResultsPage({super.key});
@@ -21,19 +23,33 @@ class AIResultsPage extends StatefulWidget {
 
 class _AIResultsPageState extends State<AIResultsPage> {
   Map<String, dynamic>? roboflowData;
+  Map<String, dynamic>? supabaseData;
   bool isLoading = true;
+  bool isDashboardLoading = true;
   String? errorMessage;
   late HomeProvider homeProvider;
+  final SupabaseDataService _supabaseService = SupabaseDataService();
+
+  // Timer for checking analysis status
+  Timer? _analysisStatusTimer;
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
     homeProvider = Provider.of<HomeProvider>(context, listen: false);
     print('🚀 AIResultsPage initialized');
-    _loadRoboflowData();
+    _loadAllData();
 
     // Listen for analysis completion
     _startListeningForAnalysisCompletion();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _analysisStatusTimer?.cancel();
+    super.dispose();
   }
 
   void _startListeningForAnalysisCompletion() {
@@ -47,11 +63,14 @@ class _AIResultsPageState extends State<AIResultsPage> {
   }
 
   void _checkAnalysisStatus() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
+    // Cancel any existing timer
+    _analysisStatusTimer?.cancel();
+
+    _analysisStatusTimer = Timer(const Duration(seconds: 1), () {
+      if (!_isDisposed && mounted) {
         if (!homeProvider.isAnalysisInProgress) {
           print('✅ Analysis completed, refreshing data...');
-          _loadRoboflowData();
+          _loadAllData();
         } else {
           print('⏳ Still waiting for analysis to complete...');
           _checkAnalysisStatus(); // Continue checking
@@ -60,7 +79,15 @@ class _AIResultsPageState extends State<AIResultsPage> {
     });
   }
 
+  Future<void> _loadAllData() async {
+    if (_isDisposed || !mounted) return;
+
+    await Future.wait([_loadRoboflowData(), _loadSupabaseData()]);
+  }
+
   Future<void> _loadRoboflowData() async {
+    if (_isDisposed || !mounted) return;
+
     try {
       print('🔄 Loading Roboflow data in AI Results page...');
 
@@ -71,11 +98,13 @@ class _AIResultsPageState extends State<AIResultsPage> {
 
       if (isStillAnalyzing) {
         print('⏳ Analysis still in progress, showing loading state...');
-        setState(() {
-          roboflowData = null;
-          isLoading = true;
-          errorMessage = null;
-        });
+        if (mounted && !_isDisposed) {
+          setState(() {
+            roboflowData = null;
+            isLoading = true;
+            errorMessage = null;
+          });
+        }
         return;
       }
 
@@ -83,11 +112,13 @@ class _AIResultsPageState extends State<AIResultsPage> {
         print('⚠️ Analysis failed according to HomeProvider');
         print('❌ Error message: ${homeProvider.roboflowErrorMessage}');
 
-        setState(() {
-          roboflowData = null;
-          isLoading = false;
-          errorMessage = homeProvider.roboflowErrorMessage;
-        });
+        if (mounted && !_isDisposed) {
+          setState(() {
+            roboflowData = null;
+            isLoading = false;
+            errorMessage = homeProvider.roboflowErrorMessage;
+          });
+        }
         return;
       }
 
@@ -117,11 +148,13 @@ class _AIResultsPageState extends State<AIResultsPage> {
           }
         }
 
-        setState(() {
-          roboflowData = providerData;
-          isLoading = false;
-          errorMessage = null;
-        });
+        if (mounted && !_isDisposed) {
+          setState(() {
+            roboflowData = providerData;
+            isLoading = false;
+            errorMessage = null;
+          });
+        }
         return;
       }
 
@@ -130,18 +163,169 @@ class _AIResultsPageState extends State<AIResultsPage> {
       );
 
       // No data available and no failure - this shouldn't happen in normal flow
-      setState(() {
-        roboflowData = null;
-        isLoading = false;
-        errorMessage = 'No analysis data available';
-      });
+      if (mounted && !_isDisposed) {
+        setState(() {
+          roboflowData = null;
+          isLoading = false;
+          errorMessage = 'No analysis data available';
+        });
+      }
     } catch (e) {
       print('💥 Exception loading Roboflow data: $e');
+      if (mounted && !_isDisposed) {
+        setState(() {
+          errorMessage = 'Failed to load AI analysis data: $e';
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadSupabaseData() async {
+    if (_isDisposed || !mounted) return;
+
+    try {
+      print('🔄 Loading Supabase data...');
+      if (mounted && !_isDisposed) {
+        setState(() {
+          isDashboardLoading = true;
+        });
+      }
+
+      final data = await _supabaseService.getLatestAnalysisData();
+
+      if (mounted && !_isDisposed) {
+        setState(() {
+          supabaseData = data;
+          isDashboardLoading = false;
+        });
+      }
+
+      if (data != null) {
+        print('✅ Loaded Supabase data successfully');
+        print(
+          '📊 Dashboard data: doors=${data['doors']}, rooms=${data['rooms']}, windows=${data['window']}',
+        );
+      } else {
+        print('⚠️ No Supabase data found');
+      }
+    } catch (e) {
+      print('❌ Error loading Supabase data: $e');
+      if (mounted && !_isDisposed) {
+        setState(() {
+          isDashboardLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Helper method to safely convert database values to int
+  int _safeToInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
+  Map<String, String> _getPropertyMetrics() {
+    // Try to get data from Supabase first (most recent analysis)
+    if (supabaseData != null) {
+      print('📊 Using Supabase data for metrics');
+
+      // Calculate total furniture count with safe conversion
+      int totalFurniture =
+          _safeToInt(supabaseData!['sofa']) +
+          _safeToInt(supabaseData!['large_sofa']) +
+          _safeToInt(supabaseData!['sink']) +
+          _safeToInt(supabaseData!['large_sink']) +
+          _safeToInt(supabaseData!['twin_sink']) +
+          _safeToInt(supabaseData!['tub']) +
+          _safeToInt(supabaseData!['coffee_table']);
+
+      // Estimate size based on rooms and doors (simplified calculation)
+      int rooms = _safeToInt(supabaseData!['rooms'], defaultValue: 1);
+      int doors = _safeToInt(supabaseData!['doors']);
+      int windows = _safeToInt(supabaseData!['window']);
+      int estimatedSize =
+          (rooms * 25) + (doors * 5) + (windows * 3) + 50; // Simple formula
+
+      return {
+        'size': '$estimatedSize sqm',
+        'rooms': rooms.toString(),
+        'doors': doors.toString(),
+        'windows': windows.toString(),
+        'furnitures': totalFurniture.toString(),
+      };
+    }
+
+    // Fallback to parsed Roboflow data
+    if (roboflowData != null) {
+      print('📊 Using parsed Roboflow data for metrics');
+      final metrics = RoboflowDataParser.extractPropertyMetrics(roboflowData!);
+      // Add windows count if not present
+      if (!metrics.containsKey('windows')) {
+        metrics['windows'] = '0';
+      }
+      return metrics;
+    }
+
+    // Final fallback to defaults
+    print('📊 Using default metrics');
+    final defaultMetrics = RoboflowDataParser.extractPropertyMetrics({});
+    defaultMetrics['windows'] = '0';
+    return defaultMetrics;
+  }
+
+  String? _getConfidenceScore() {
+    if (supabaseData != null && supabaseData!['confidence_score'] != null) {
+      int confidence = _safeToInt(supabaseData!['confidence_score']);
+      return confidence.toString();
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _getDetailedCounts() {
+    if (supabaseData != null) {
+      return {
+        'rooms': _safeToInt(supabaseData!['rooms']),
+        'sofa': _safeToInt(supabaseData!['sofa']),
+        'large_sofa': _safeToInt(supabaseData!['large_sofa']),
+        'coffee_table': _safeToInt(supabaseData!['coffee_table']),
+        'sink': _safeToInt(supabaseData!['sink']),
+        'large_sink': _safeToInt(supabaseData!['large_sink']),
+        'twin_sink': _safeToInt(supabaseData!['twin_sink']),
+        'tub': _safeToInt(supabaseData!['tub']),
+      };
+    }
+    return null;
+  }
+
+  Future<void> _handleRetry() async {
+    if (_isDisposed || !mounted) return;
+
+    if (mounted && !_isDisposed) {
       setState(() {
-        errorMessage = 'Failed to load AI analysis data: $e';
-        isLoading = false;
+        isLoading = true;
       });
     }
+
+    final error = await homeProvider.retryRoboflowAnalysis();
+
+    if (!mounted || _isDisposed) return;
+
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Retry failed: $error')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Analysis completed successfully!')),
+      );
+    }
+
+    // Refresh the page data after retry
+    await _loadAllData();
   }
 
   @override
@@ -189,7 +373,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _loadRoboflowData,
+                  onPressed: _loadAllData,
                   child: const Text('Retry'),
                 ),
               ],
@@ -207,9 +391,9 @@ class _AIResultsPageState extends State<AIResultsPage> {
         ? RoboflowDataParser.extractInsights(roboflowData!)
         : RoboflowDataParser.extractInsights({});
 
-    final propertyMetrics = roboflowData != null
-        ? RoboflowDataParser.extractPropertyMetrics(roboflowData!)
-        : RoboflowDataParser.extractPropertyMetrics({});
+    final propertyMetrics = _getPropertyMetrics();
+    final confidenceScore = _getConfidenceScore();
+    final detailedCounts = _getDetailedCounts();
 
     final labelImageData = roboflowData != null
         ? RoboflowDataParser.extractLabelVisualizationImage(roboflowData!)
@@ -235,20 +419,34 @@ class _AIResultsPageState extends State<AIResultsPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadAllData,
+            tooltip: 'Refresh Data',
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           // Price Prediction Section
-          PricePredictionCard(price: '\$500,000', confidence: '92%'),
+          PricePredictionCard(
+            price: '\$500,000',
+            confidence: confidenceScore != null ? '$confidenceScore%' : '92%',
+          ),
           const SizedBox(height: 24),
 
-          // Dashboard Section
+          // Dashboard Section with live data
           PropertyDashboardCard(
             size: propertyMetrics['size']!,
             rooms: propertyMetrics['rooms']!,
             doors: propertyMetrics['doors']!,
+            windows: propertyMetrics['windows']!,
             furnitures: propertyMetrics['furnitures']!,
+            confidence: confidenceScore,
+            isLoading: isDashboardLoading,
+            detailedCounts: detailedCounts,
           ),
           const SizedBox(height: 24),
 
@@ -259,27 +457,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
             capturedImage: homeProvider.capturedImage,
             hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
             errorMessage: homeProvider.roboflowErrorMessage,
-            onRetry: () async {
-              setState(() {
-                isLoading = true;
-              });
-
-              final error = await homeProvider.retryRoboflowAnalysis();
-              if (error != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Retry failed: $error')));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Analysis completed successfully!'),
-                  ),
-                );
-              }
-
-              // Refresh the page data after retry
-              await _loadRoboflowData();
-            },
+            onRetry: _handleRetry,
           ),
           const SizedBox(height: 24),
 
@@ -290,9 +468,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
           // Download Report Section
           DownloadReportCard(
             onDownload: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock report downloaded!')),
-              );
+              if (mounted && !_isDisposed) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mock report downloaded!')),
+                );
+              }
             },
           ),
         ],
