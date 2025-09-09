@@ -91,6 +91,86 @@ class RoboflowClassExtractor {
     }
   }
 
+  /// Extracts individual object counts for database storage
+  static Map<String, int> extractIndividualCounts(
+    Map<String, dynamic> roboflowData,
+  ) {
+    developer.log('🔢 Extracting individual object counts for database');
+
+    final classCounts = extractClassCounts(roboflowData);
+
+    // Map Roboflow class names to database column names
+    final Map<String, int> dbCounts = {
+      'doors': 0,
+      'rooms': 0,
+      'window': 0,
+      'sofa': 0,
+      'large_sofa': 0,
+      'sink': 0,
+      'large_sink': 0,
+      'twin_sink': 0,
+      'tub': 0,
+      'coffee_table': 0,
+      'total_detections': classCounts.totalDetections,
+    };
+
+    // Map class names from Roboflow to database columns
+    for (final entry in classCounts.classCounts.entries) {
+      final className = entry.key.toLowerCase();
+      final count = entry.value;
+
+      // Direct mappings
+      if (dbCounts.containsKey(className)) {
+        dbCounts[className] = count;
+      }
+
+      // Handle variations and mappings
+      switch (className) {
+        case 'door':
+          dbCounts['doors'] = (dbCounts['doors'] ?? 0) + count;
+          break;
+        case 'room':
+          dbCounts['rooms'] = (dbCounts['rooms'] ?? 0) + count;
+          break;
+        case 'windows':
+          dbCounts['window'] = (dbCounts['window'] ?? 0) + count;
+          break;
+        case 'small_sofa':
+          dbCounts['sofa'] = (dbCounts['sofa'] ?? 0) + count;
+          break;
+        case 'small_sink':
+          dbCounts['sink'] = (dbCounts['sink'] ?? 0) + count;
+          break;
+        case 'bathtub':
+        case 'bath_tub':
+          dbCounts['tub'] = (dbCounts['tub'] ?? 0) + count;
+          break;
+        case 'table':
+        case 'coffee table':
+          dbCounts['coffee_table'] = (dbCounts['coffee_table'] ?? 0) + count;
+          break;
+      }
+    }
+
+    // Calculate average confidence
+    double avgConfidence = 0.0;
+    if (classCounts.totalDetections > 0) {
+      double totalConfidence = 0.0;
+      for (final detections in classCounts.classDetections.values) {
+        for (final detection in detections) {
+          totalConfidence += detection.confidence;
+        }
+      }
+      avgConfidence = totalConfidence / classCounts.totalDetections;
+    }
+
+    // Store confidence as integer (percentage)
+    dbCounts['confidence_score'] = (avgConfidence * 100).round();
+
+    developer.log('📊 Extracted counts for database: $dbCounts');
+    return dbCounts;
+  }
+
   /// Processes a single prediction and updates class counts
   static void _processPrediction(
     Map<String, dynamic> prediction,
