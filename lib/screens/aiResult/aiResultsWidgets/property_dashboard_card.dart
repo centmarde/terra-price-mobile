@@ -72,7 +72,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       onTap: null,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6), // Reduced spacing
                   Expanded(
                     child: _dashboardTile(
                       context,
@@ -83,7 +83,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       onTap: null,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6), // Reduced spacing
                   Expanded(
                     child: _dashboardTile(
                       context,
@@ -94,7 +94,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       onTap: null,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6), // Reduced spacing
                   Expanded(
                     child: _dashboardTile(
                       context,
@@ -182,12 +182,15 @@ class PropertyDashboardCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+          vertical: 8,
+          horizontal: 2,
+        ), // Reduced padding
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8), // Reduced padding
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -198,7 +201,7 @@ class PropertyDashboardCard extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(icon, size: 28, color: color),
+                  Icon(icon, size: 24, color: color), // Slightly smaller icon
                   if (onTap != null)
                     Positioned(
                       bottom: -2,
@@ -211,7 +214,7 @@ class PropertyDashboardCard extends StatelessWidget {
                         ),
                         child: Icon(
                           Icons.touch_app,
-                          size: 10,
+                          size: 8,
                           color: Colors.white,
                         ),
                       ),
@@ -219,25 +222,31 @@ class PropertyDashboardCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4), // Reduced spacing
             Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ), // Smaller font
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
             const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: color,
+            // Make the value text more flexible
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13, // Smaller font
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
               ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
             ),
           ],
         ),
