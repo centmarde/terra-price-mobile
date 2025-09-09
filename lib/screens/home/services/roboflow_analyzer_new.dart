@@ -6,7 +6,7 @@ import 'roboflow_client.dart';
 import 'roboflow_models.dart';
 import 'roboflow_class_extractor.dart';
 import 'image_upload_service.dart';
-import '../../aiResult/aiResultsWidgets/roboflow_data_parser.dart';
+import '../../aiResult/services/roboflow_data_parser.dart';
 
 /// High-level service for analyzing images with Roboflow
 class RoboflowAnalyzer {

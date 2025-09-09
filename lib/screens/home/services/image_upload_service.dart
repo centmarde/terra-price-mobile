@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
+import 'roboflow_class_extractor.dart';
 
 class ImageUploadService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -108,14 +109,19 @@ class ImageUploadService {
     }
 
     try {
+      // Extract individual object counts for database columns
+      final objectCounts = RoboflowClassExtractor.extractIndividualCounts(
+        roboflowData,
+      );
+
       // Store only the last processed image to avoid duplicates
       final lastFilePath = processedFilePaths.last;
       final fileName = lastFilePath.split('/').last;
       final fullUrl =
           'https://gqxhltrjxuiuyveiqtsf.supabase.co/storage/v1/object/public/ai_results/$lastFilePath';
 
-      // Insert metadata record for the last processed image
-      await _supabase.from('mobile_uploads').insert({
+      // Prepare the insert data with object counts
+      final insertData = {
         'user_id': userId,
         'file_name': fileName,
         'file_path': fullUrl,
@@ -124,9 +130,27 @@ class ImageUploadService {
         'roboflow_data': roboflowData, // jsonB Store the full analysis data
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      });
+        'analyzed_at': DateTime.now().toIso8601String(),
+        // Add object counts
+        'doors': objectCounts['doors'],
+        'rooms': objectCounts['rooms'],
+        'window': objectCounts['window'],
+        'sofa': objectCounts['sofa'],
+        'large_sofa': objectCounts['large_sofa'],
+        'sink': objectCounts['sink'],
+        'large_sink': objectCounts['large_sink'],
+        'twin_sink': objectCounts['twin_sink'],
+        'tub': objectCounts['tub'],
+        'coffee_table': objectCounts['coffee_table'],
+        'total_detections': objectCounts['total_detections'],
+        'confidence_score': objectCounts['confidence_score'],
+      };
+
+      // Insert metadata record for the last processed image
+      await _supabase.from('mobile_uploads').insert(insertData);
 
       print('📝 Stored metadata for last processed image: $fileName');
+      print('🔢 Object counts: $objectCounts');
       print(
         '🔗 Total processed images: ${processedFilePaths.length}, stored: 1 (last)',
       );

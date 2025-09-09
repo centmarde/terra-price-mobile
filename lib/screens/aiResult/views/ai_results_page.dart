@@ -8,8 +8,8 @@ import '../aiResultsWidgets/price_predicion_card.dart';
 import '../aiResultsWidgets/property_dashboard_card.dart';
 import '../aiResultsWidgets/floorplan_analysis_card.dart';
 import '../aiResultsWidgets/price_trend_chart.dart';
-import '../aiResultsWidgets/roboflow_data_parser.dart';
-import '../../home/widgets/download_report_card.dart';
+import '../services/roboflow_data_parser.dart';
+import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
 
 class AIResultsPage extends StatefulWidget {
