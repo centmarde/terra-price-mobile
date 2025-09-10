@@ -94,38 +94,64 @@ class RoboflowDataParser {
     try {
       List<dynamic>? predictions;
 
-      // Check the new structure from live API: outputs[0].predictions or similar
+      // Check the new structure from live API: outputs[0] and look for any prediction-like data
       if (roboflowData.containsKey('outputs') &&
           roboflowData['outputs'] is List &&
           (roboflowData['outputs'] as List).isNotEmpty) {
         final firstOutput = (roboflowData['outputs'] as List)[0];
         if (firstOutput is Map<String, dynamic>) {
-          // Try different possible prediction keys
-          predictions = firstOutput['predictions'] as List<dynamic>?;
-          if (predictions == null) {
-            predictions = firstOutput['detections'] as List<dynamic>?;
-          }
-          if (predictions == null) {
-            predictions = firstOutput['objects'] as List<dynamic>?;
+          developer.log('🔍 Searching for predictions in outputs[0]');
+          developer.log(
+            '📋 Available keys in outputs[0]: ${firstOutput.keys.toList()}',
+          );
+
+          // Try different possible prediction keys in the actual structure
+          for (String key in firstOutput.keys) {
+            if (key.toLowerCase().contains('prediction') ||
+                key.toLowerCase().contains('detection') ||
+                key.toLowerCase().contains('object')) {
+              final value = firstOutput[key];
+              developer.log(
+                '🔍 Checking key: $key, type: ${value.runtimeType}',
+              );
+
+              if (value is Map<String, dynamic> &&
+                  value.containsKey('predictions')) {
+                predictions = value['predictions'] as List<dynamic>?;
+                developer.log('✅ Found predictions in $key.predictions');
+                break;
+              } else if (value is List<dynamic>) {
+                predictions = value;
+                developer.log('✅ Found predictions directly in $key');
+                break;
+              }
+            }
           }
         }
       }
 
       // Fallback to old structure for backward compatibility
       if (predictions == null) {
-        predictions =
-            roboflowData['predictions']?['predictions'] as List<dynamic>?;
-      }
-      if (predictions == null) {
-        predictions = roboflowData['predictions'] as List<dynamic>?;
+        if (roboflowData.containsKey('predictions')) {
+          final predData = roboflowData['predictions'];
+          if (predData is Map<String, dynamic> &&
+              predData.containsKey('predictions')) {
+            predictions = predData['predictions'] as List<dynamic>?;
+          } else if (predData is List<dynamic>) {
+            predictions = predData;
+          }
+        }
       }
 
-      if (predictions == null) {
+      if (predictions == null || predictions.isEmpty) {
         developer.log(
           '⚠️ No predictions found in Roboflow data, using default insights',
         );
+        developer.log('📋 Full data structure: $roboflowData');
         return _getDefaultInsights();
       }
+
+      developer.log('✅ Found ${predictions.length} predictions to process');
 
       // Count different types of detected objects
       Map<String, int> objectCounts = {};
@@ -133,16 +159,19 @@ class RoboflowDataParser {
       int detectionCount = 0;
 
       for (var prediction in predictions) {
-        final className = prediction['class'] as String?;
-        final confidence = prediction['confidence'] as double?;
+        if (prediction is Map<String, dynamic>) {
+          final className = prediction['class'] as String?;
+          final confidence = prediction['confidence'] as double?;
 
-        if (className != null) {
-          objectCounts[className] = (objectCounts[className] ?? 0) + 1;
-        }
+          if (className != null) {
+            objectCounts[className] = (objectCounts[className] ?? 0) + 1;
+            developer.log('🏷️ Found object: $className');
+          }
 
-        if (confidence != null) {
-          totalConfidence += confidence;
-          detectionCount++;
+          if (confidence != null) {
+            totalConfidence += confidence;
+            detectionCount++;
+          }
         }
       }
 
@@ -187,8 +216,9 @@ class RoboflowDataParser {
         '✅ Generated ${insights.length} insights from Roboflow predictions',
       );
       return insights.take(4).toList(); // Limit to 4 insights
-    } catch (e) {
+    } catch (e, stackTrace) {
       developer.log('❌ Error extracting insights: $e');
+      developer.log('📚 Stack trace: $stackTrace');
       return _getDefaultInsights();
     }
   }
@@ -219,33 +249,56 @@ class RoboflowDataParser {
     try {
       List<dynamic>? predictions;
 
-      // Check the new structure from live API: outputs[0].predictions or similar
+      // Check the new structure from live API: outputs[0] and look for any prediction-like data
       if (roboflowData.containsKey('outputs') &&
           roboflowData['outputs'] is List &&
           (roboflowData['outputs'] as List).isNotEmpty) {
         final firstOutput = (roboflowData['outputs'] as List)[0];
         if (firstOutput is Map<String, dynamic>) {
-          // Try different possible prediction keys
-          predictions = firstOutput['predictions'] as List<dynamic>?;
-          if (predictions == null) {
-            predictions = firstOutput['detections'] as List<dynamic>?;
-          }
-          if (predictions == null) {
-            predictions = firstOutput['objects'] as List<dynamic>?;
+          developer.log(
+            '🔍 Searching for predictions in outputs[0] for metrics',
+          );
+
+          // Try different possible prediction keys in the actual structure
+          for (String key in firstOutput.keys) {
+            if (key.toLowerCase().contains('prediction') ||
+                key.toLowerCase().contains('detection') ||
+                key.toLowerCase().contains('object')) {
+              final value = firstOutput[key];
+
+              if (value is Map<String, dynamic> &&
+                  value.containsKey('predictions')) {
+                predictions = value['predictions'] as List<dynamic>?;
+                developer.log(
+                  '✅ Found predictions in $key.predictions for metrics',
+                );
+                break;
+              } else if (value is List<dynamic>) {
+                predictions = value;
+                developer.log(
+                  '✅ Found predictions directly in $key for metrics',
+                );
+                break;
+              }
+            }
           }
         }
       }
 
       // Fallback to old structure for backward compatibility
       if (predictions == null) {
-        predictions =
-            roboflowData['predictions']?['predictions'] as List<dynamic>?;
-      }
-      if (predictions == null) {
-        predictions = roboflowData['predictions'] as List<dynamic>?;
+        if (roboflowData.containsKey('predictions')) {
+          final predData = roboflowData['predictions'];
+          if (predData is Map<String, dynamic> &&
+              predData.containsKey('predictions')) {
+            predictions = predData['predictions'] as List<dynamic>?;
+          } else if (predData is List<dynamic>) {
+            predictions = predData;
+          }
+        }
       }
 
-      if (predictions == null) {
+      if (predictions == null || predictions.isEmpty) {
         developer.log(
           '⚠️ No predictions found for metrics extraction, using defaults',
         );
@@ -255,9 +308,11 @@ class RoboflowDataParser {
       Map<String, int> objectCounts = {};
 
       for (var prediction in predictions) {
-        final className = prediction['class'] as String?;
-        if (className != null) {
-          objectCounts[className] = (objectCounts[className] ?? 0) + 1;
+        if (prediction is Map<String, dynamic>) {
+          final className = prediction['class'] as String?;
+          if (className != null) {
+            objectCounts[className] = (objectCounts[className] ?? 0) + 1;
+          }
         }
       }
 
@@ -276,8 +331,9 @@ class RoboflowDataParser {
         'doors': (objectCounts['door'] ?? 0).toString(),
         'furnitures': _countFurniture(objectCounts).toString(),
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
       developer.log('❌ Error extracting property metrics: $e');
+      developer.log('📚 Stack trace: $stackTrace');
       return _getDefaultMetrics();
     }
   }

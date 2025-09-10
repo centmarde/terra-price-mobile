@@ -34,6 +34,12 @@ dependencies:
   path: ^1.8.0
   mime: ^1.0.4
 
+  intl: ^0.19.0
+
+  pdf: ^3.10.4
+  printing: ^5.11.0
+  path_provider: ^2.1.1
+
   # For picking images from the gallery or camera
   image_picker: ^1.0.4
 
