@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
 import 'roboflow_class_extractor.dart';
-import '../../aiResult/services/groq_ai_service.dart';
+import '../../aiResult/services/services.dart';
 
 class ImageUploadService {
   final SupabaseClient _supabase = Supabase.instance.client;

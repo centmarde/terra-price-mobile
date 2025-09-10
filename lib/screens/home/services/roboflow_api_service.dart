@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'roboflow_analyzer.dart';
 import 'roboflow_models.dart';
-import '../../aiResult/services/groq_ai_service.dart';
+import '../../aiResult/services/services.dart';
 
 /// Main service class to handle Roboflow API integration
 /// Orchestrates the analysis process using smaller, focused components

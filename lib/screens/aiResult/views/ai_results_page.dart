@@ -233,14 +233,13 @@ class _AIResultsPageState extends State<AIResultsPage> {
     try {
       print('🔄 Loading AI response...');
 
-      // Get the latest analysis data to get the upload ID
-      final latestData = await _supabaseService.getLatestAnalysisData();
+      // Get all analysis data - this includes AI responses
+      final allAnalysisData = await _supabaseService.getAllAnalysisData();
 
-      if (latestData != null && latestData['id'] != null) {
-        // Fetch the AI response using the upload ID
-        final response = await _supabaseService.getAIResponseById(
-          latestData['id'].toString(),
-        );
+      if (allAnalysisData.isNotEmpty) {
+        // Get the latest analysis (first item since it's ordered by analyzed_at desc)
+        final latestData = allAnalysisData.first;
+        final response = latestData['ai_response'] as String?;
 
         if (response != null && response.isNotEmpty) {
           // Extract cost and confidence from the AI response
@@ -259,10 +258,10 @@ class _AIResultsPageState extends State<AIResultsPage> {
           print('💰 Extracted cost: $cost');
           print('📊 Extracted confidence: $confidence');
         } else {
-          print('⚠️ No AI response found in database');
+          print('⚠️ No AI response found in latest analysis data');
         }
       } else {
-        print('⚠️ No latest analysis data found for AI response');
+        print('⚠️ No analysis data found for AI response');
       }
     } catch (e) {
       print('❌ Error loading AI response: $e');
@@ -349,32 +348,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
       };
     }
     return null;
-  }
-
-  String _getDisplayPrice() {
-    // First try to use extracted cost from AI response
-    if (extractedCost != null && AIResponseParser.isValidCost(extractedCost)) {
-      return extractedCost!;
-    }
-
-    // Fallback to default price
-    return '\$500,000';
-  }
-
-  String _getDisplayConfidence() {
-    // First try to use extracted confidence from AI response
-    if (extractedConfidence != null) {
-      return extractedConfidence!;
-    }
-
-    // Then try confidence score from database
-    final confidenceScore = _getConfidenceScore();
-    if (confidenceScore != null) {
-      return '$confidenceScore%';
-    }
-
-    // Fallback to default confidence
-    return '92%';
   }
 
   Future<void> _handleRetry() async {
@@ -569,8 +542,8 @@ class _AIResultsPageState extends State<AIResultsPage> {
             hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
             errorMessage: homeProvider.roboflowErrorMessage,
             onRetry: _handleRetry,
-            uploadId: supabaseData?['id']
-                ?.toString(), // Pass upload ID for AI response fetching
+            aiResponse: aiResponse, // Pass AI response directly
+            isAILoading: aiResponse == null && errorMessage == null,
           ),
           const SizedBox(height: 24),
 

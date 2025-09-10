@@ -189,7 +189,6 @@ class FloorplanAnalysisCard extends StatelessWidget {
               response: aiResponse,
               isLoading: isAILoading,
               errorMessage: aiErrorMessage,
-              uploadId: uploadId,
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Exception thrown when Groq AI API calls fail
 class GroqAIException implements Exception {
@@ -111,9 +112,15 @@ class GroqAIService {
   static const String _baseUrl = 'https://api.groq.com/openai/v1';
   static const String _chatCompletionsEndpoint = '/chat/completions';
 
-  /// Get API key (hardcoded)
+  /// Get API key from environment variables
   static String get _apiKey {
-    return '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';
+    final apiKey = dotenv.env['META_MAVERICK_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      throw GroqAIException(
+        'META_MAVERICK_API_KEY not found in environment variables',
+      );
+    }
+    return apiKey;
   }
 
   /// Analyze floor plan image and get construction cost estimate
