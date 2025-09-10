@@ -8,7 +8,6 @@ import 'dart:async';
 import '../aiResultsWidgets/price_predicion_card.dart';
 import '../aiResultsWidgets/property_dashboard_card.dart';
 import '../aiResultsWidgets/floorplan_analysis_card.dart';
-import '../aiResultsWidgets/price_trend_chart.dart';
 import '../services/roboflow_data_parser.dart';
 import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
@@ -207,7 +206,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
           '📊 Dashboard data: doors=${data['doors']}, rooms=${data['rooms']}, windows=${data['window']}',
         );
       } else {
-        print('⚠️ No Supabase data found');
+        print('⚠️ No Supabase data found - possibly authentication issue');
       }
     } catch (e) {
       print('❌ Error loading Supabase data: $e');
@@ -342,7 +341,14 @@ class _AIResultsPageState extends State<AIResultsPage> {
           ),
         ),
         body: const Center(
-          child: CircularProgressIndicator(color: Colors.green),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.green),
+              SizedBox(height: 16),
+              Text('Loading AI analysis results...'),
+            ],
+          ),
         ),
       );
     }
@@ -375,6 +381,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
                 ElevatedButton(
                   onPressed: _loadAllData,
                   child: const Text('Retry'),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => context.go('/home'),
+                  child: const Text('Go Back to Home'),
                 ),
               ],
             ),
@@ -430,6 +441,47 @@ class _AIResultsPageState extends State<AIResultsPage> {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          // Show authentication warning if Supabase data is not available
+          if (supabaseData == null && !isDashboardLoading) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.orange[700]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Limited Data Available',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Some historical data may not be available due to authentication. Live AI analysis is still working.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Price Prediction Section
           PricePredictionCard(
             price: '\$500,000',
@@ -459,10 +511,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
             errorMessage: homeProvider.roboflowErrorMessage,
             onRetry: _handleRetry,
           ),
-          const SizedBox(height: 24),
-
-          // Price Trend Chart Section
-          PriceTrendChart(spots: spots, months: months),
           const SizedBox(height: 24),
 
           // Download Report Section

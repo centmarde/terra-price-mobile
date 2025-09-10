@@ -4,6 +4,57 @@ import 'dart:developer' as developer;
 class SupabaseDataService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  /// Helper method to check if user is authenticated and session is valid
+  bool _isAuthenticated() {
+    try {
+      final user = _supabase.auth.currentUser;
+      final session = _supabase.auth.currentSession;
+
+      if (user == null || session == null) {
+        developer.log('❌ User not authenticated - no user or session');
+        return false;
+      }
+
+      // Check if session is expired
+      final now = DateTime.now();
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        session.expiresAt! * 1000,
+      );
+
+      if (now.isAfter(expiresAt)) {
+        developer.log('❌ Session expired at: $expiresAt, current time: $now');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      developer.log('❌ Error checking authentication status: $e');
+      return false;
+    }
+  }
+
+  /// Attempts to refresh the session if needed
+  Future<bool> _ensureValidSession() async {
+    try {
+      if (!_isAuthenticated()) {
+        developer.log('🔄 Attempting to refresh session...');
+
+        final response = await _supabase.auth.refreshSession();
+        if (response.session != null) {
+          developer.log('✅ Session refreshed successfully');
+          return true;
+        } else {
+          developer.log('❌ Failed to refresh session');
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      developer.log('❌ Error refreshing session: $e');
+      return false;
+    }
+  }
+
   /// Helper method to safely convert database values to int
   int _safeToInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
@@ -25,9 +76,16 @@ class SupabaseDataService {
   /// Fetches the latest analysis data for the current user
   Future<Map<String, dynamic>?> getLatestAnalysisData() async {
     try {
+      // Ensure we have a valid session
+      final hasValidSession = await _ensureValidSession();
+      if (!hasValidSession) {
+        developer.log('❌ Cannot fetch data - invalid session');
+        return null;
+      }
+
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
-        developer.log('❌ User not authenticated');
+        developer.log('❌ User ID is null after session check');
         return null;
       }
 
@@ -83,9 +141,16 @@ class SupabaseDataService {
   /// Fetches all analysis data for the current user
   Future<List<Map<String, dynamic>>> getAllAnalysisData() async {
     try {
+      // Ensure we have a valid session
+      final hasValidSession = await _ensureValidSession();
+      if (!hasValidSession) {
+        developer.log('❌ Cannot fetch data - invalid session');
+        return [];
+      }
+
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
-        developer.log('❌ User not authenticated');
+        developer.log('❌ User ID is null after session check');
         return [];
       }
 
@@ -131,6 +196,18 @@ class SupabaseDataService {
   /// Gets analysis statistics
   Future<Map<String, dynamic>> getAnalysisStatistics() async {
     try {
+      // Ensure we have a valid session
+      final hasValidSession = await _ensureValidSession();
+      if (!hasValidSession) {
+        developer.log('❌ Cannot fetch stats - invalid session');
+        return {
+          'totalAnalyses': 0,
+          'totalDetections': 0,
+          'averageConfidence': 0.0,
+          'mostCommonObject': 'None',
+        };
+      }
+
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
         return {
