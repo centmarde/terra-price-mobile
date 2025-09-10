@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'providers/splash_provider.dart';
-import '../../core/widgets/loading_widget.dart';
-import '../../routes/app_routes.dart';
+import '../providers/splash_provider.dart';
+import '../../../core/widgets/loading_widget.dart';
+import '../../../routes/app_routes.dart';
 
 /// Splash screen with loading state and navigation to landing page
 /// Displays app branding while initializing core services

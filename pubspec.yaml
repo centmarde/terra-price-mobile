@@ -34,6 +34,12 @@ dependencies:
   path: ^1.8.0
   mime: ^1.0.4
 
+  intl: ^0.19.0
+
+  pdf: ^3.10.4
+  printing: ^5.11.0
+  path_provider: ^2.1.1
+
   # For picking images from the gallery or camera
   image_picker: ^1.0.4
 
@@ -65,6 +71,9 @@ dependencies:
   # for charts
   fl_chart: ^0.67.0
 
+  # HTTP requests
+  http: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -89,6 +98,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - lib/assets/logo.png
+    - lib/assets/rboflow_sample.json
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'providers/home_provider.dart';
-import 'widgets/home_page.dart';
-import 'widgets/profile_page.dart';
-import 'widgets/settings_page.dart';
+import '../providers/home_provider.dart';
+import '../widgets/baseWidgets/home_page.dart';
+import '../../profile/views/profile_page.dart';
+import '../../settings/views/settings_page.dart';
+import '../../profile/providers/profile_provider.dart'; // Add this import
 
 /// Home screen with bottom navigation and page view
 /// Main screen for authenticated users
@@ -14,7 +15,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => HomeProvider(),
+      create: (context) => ProfileProvider(),
       child: Consumer<HomeProvider>(
         builder: (context, homeProvider, child) {
           return Scaffold(

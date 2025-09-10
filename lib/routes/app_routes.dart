@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../screens/splash/splash_screen.dart';
-import '../screens/landing/landing_screen.dart';
-import '../screens/home/home_screen.dart';
+import '../screens/splash/views/splash_screen.dart';
+import '../screens/landing/views/landing_screen.dart';
+import '../screens/home/views/home_screen.dart';
 import '../core/providers/auth_state_provider.dart';
-import '../screens/home/widgets/ai_results_page.dart';
+import '../screens/aiResult/views/ai_results_page.dart';
 
 /// Application routes configuration using go_router
 /// Supports navigation between splash, landing, and home screens with authentication guards

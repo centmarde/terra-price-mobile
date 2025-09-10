@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/constants/supabase_constants.dart';
 import 'core/services/storage/storage_service.dart';
 import 'core/providers/auth_state_provider.dart';
@@ -10,14 +11,18 @@ import 'theme/app_theme.dart';
 import 'screens/splash/providers/splash_provider.dart';
 import 'screens/landing/providers/auth_provider.dart';
 import 'screens/landing/providers/landing_provider.dart';
+import 'screens/home/providers/home_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
   // Initialize storage service
   await StorageService.initialize();
 
-  // Initialize Supabase
+  // Initialize Supabase (without serviceRoleKey as it's not a valid parameter)
   await Supabase.initialize(
     url: SupabaseConstants.supabaseUrl,
     anonKey: SupabaseConstants.supabaseAnonKey,
@@ -45,6 +50,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (context) => SplashProvider()),
             ChangeNotifierProvider(create: (context) => AuthProvider()),
             ChangeNotifierProvider(create: (context) => LandingProvider()),
+            ChangeNotifierProvider(create: (context) => HomeProvider()),
           ],
           child: Consumer<AuthStateProvider>(
             builder: (context, authStateProvider, child) {
