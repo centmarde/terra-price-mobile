@@ -13,6 +13,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
   final String? aiResponse; // AI analysis response
   final bool isAILoading; // Whether AI is loading
   final String? aiErrorMessage; // AI error message
+  final String? uploadId; // Upload ID to fetch AI response from Supabase
 
   const FloorplanAnalysisCard({
     super.key,
@@ -25,6 +26,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
     this.aiResponse,
     this.isAILoading = false,
     this.aiErrorMessage,
+    this.uploadId,
   });
 
   @override
@@ -184,9 +186,10 @@ class FloorplanAnalysisCard extends StatelessWidget {
 
             // Analysis insights
             KeyInsightCard(
-              response: aiResponse ?? '',
+              response: aiResponse,
               isLoading: isAILoading,
               errorMessage: aiErrorMessage,
+              uploadId: uploadId,
             ),
           ],
         ),

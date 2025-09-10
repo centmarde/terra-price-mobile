@@ -1,16 +1,74 @@
 import 'package:flutter/material.dart';
+import '../services/supabase_data_service.dart';
 
-class KeyInsightCard extends StatelessWidget {
-  final String response;
+class KeyInsightCard extends StatefulWidget {
+  final String? response;
   final bool isLoading;
   final String? errorMessage;
+  final String? uploadId; // Add uploadId parameter to fetch AI response
 
   const KeyInsightCard({
     super.key,
-    required this.response,
+    this.response,
     this.isLoading = false,
     this.errorMessage,
+    this.uploadId,
   });
+
+  @override
+  State<KeyInsightCard> createState() => _KeyInsightCardState();
+}
+
+class _KeyInsightCardState extends State<KeyInsightCard> {
+  final SupabaseDataService _supabaseService = SupabaseDataService();
+  String? _aiResponse;
+  bool _isFetchingAI = false;
+  String? _fetchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAIResponse();
+  }
+
+  Future<void> _fetchAIResponse() async {
+    // If we already have a response from props or no uploadId, don't fetch
+    if (widget.response != null && widget.response!.isNotEmpty) {
+      setState(() {
+        _aiResponse = widget.response;
+      });
+      return;
+    }
+
+    if (widget.uploadId == null || widget.uploadId!.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isFetchingAI = true;
+      _fetchError = null;
+    });
+
+    try {
+      final response = await _supabaseService.getAIResponseById(
+        widget.uploadId!,
+      );
+
+      if (mounted) {
+        setState(() {
+          _aiResponse = response;
+          _isFetchingAI = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _fetchError = 'Failed to fetch AI insights: $e';
+          _isFetchingAI = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,19 +115,24 @@ class KeyInsightCard extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    if (isLoading) {
+    // Check if we're currently fetching AI response or if widget is in loading state
+    if (_isFetchingAI || widget.isLoading) {
       return _buildLoadingWidget();
     }
 
-    if (errorMessage != null) {
+    // Check for fetch error or widget error
+    if (_fetchError != null || widget.errorMessage != null) {
       return _buildErrorWidget();
     }
 
-    if (response.isEmpty) {
+    // Use fetched AI response or fallback to widget response
+    final currentResponse = _aiResponse ?? widget.response ?? '';
+
+    if (currentResponse.isEmpty) {
       return _buildEmptyWidget();
     }
 
-    return _buildFormattedResponse(context);
+    return _buildFormattedResponse(context, currentResponse);
   }
 
   Widget _buildLoadingWidget() {
@@ -97,6 +160,9 @@ class KeyInsightCard extends StatelessWidget {
   }
 
   Widget _buildErrorWidget() {
+    final errorMsg =
+        _fetchError ?? widget.errorMessage ?? 'Unable to get AI insights';
+
     return Column(
       children: [
         Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
@@ -111,7 +177,7 @@ class KeyInsightCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          errorMessage ?? 'Unable to get AI insights',
+          errorMsg,
           style: TextStyle(fontSize: 14, color: Colors.red[600]),
           textAlign: TextAlign.center,
         ),
@@ -142,7 +208,7 @@ class KeyInsightCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFormattedResponse(BuildContext context) {
+  Widget _buildFormattedResponse(BuildContext context, String response) {
     final formattedWidgets = _parseFormattedText(response);
 
     return Column(

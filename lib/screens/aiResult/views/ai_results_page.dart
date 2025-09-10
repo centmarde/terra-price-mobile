@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -410,17 +409,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
         ? RoboflowDataParser.extractLabelVisualizationImage(roboflowData!)
         : null;
 
-    // Mock data for trend graph (would be replaced with real data in production)
-    final List<FlSpot> spots = [
-      FlSpot(1, 480),
-      FlSpot(2, 490),
-      FlSpot(3, 500),
-      FlSpot(4, 510),
-      FlSpot(5, 505),
-    ];
-
-    final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80,
@@ -510,6 +498,8 @@ class _AIResultsPageState extends State<AIResultsPage> {
             hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
             errorMessage: homeProvider.roboflowErrorMessage,
             onRetry: _handleRetry,
+            uploadId: supabaseData?['id']
+                ?.toString(), // Pass upload ID for AI response fetching
           ),
           const SizedBox(height: 24),
 

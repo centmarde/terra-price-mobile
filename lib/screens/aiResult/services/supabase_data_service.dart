@@ -297,4 +297,44 @@ class SupabaseDataService {
       };
     }
   }
+
+  /// Fetches AI response by upload ID
+  Future<String?> getAIResponseById(String uploadId) async {
+    try {
+      // Ensure we have a valid session
+      final hasValidSession = await _ensureValidSession();
+      if (!hasValidSession) {
+        developer.log('❌ Cannot fetch AI response - invalid session');
+        return null;
+      }
+
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        developer.log('❌ User ID is null after session check');
+        return null;
+      }
+
+      developer.log('🔍 Fetching AI response for upload ID: $uploadId');
+
+      final response = await _supabase
+          .from('mobile_uploads')
+          .select('ai_response')
+          .eq('id', uploadId)
+          .eq('user_id', userId) // Ensure user can only access their own data
+          .single();
+
+      final aiResponse = response['ai_response'] as String?;
+
+      if (aiResponse == null || aiResponse.isEmpty) {
+        developer.log('⚠️ No AI response found for upload ID: $uploadId');
+        return null;
+      }
+
+      developer.log('✅ Found AI response for upload ID: $uploadId');
+      return aiResponse;
+    } catch (e) {
+      developer.log('❌ Error fetching AI response by ID: $e');
+      return null;
+    }
+  }
 }
