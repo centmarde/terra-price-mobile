@@ -4,13 +4,14 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 // Import widget components
-import '../aiResultsWidgets/price_predicion_card.dart';
+
 import '../aiResultsWidgets/property_dashboard_card.dart';
 import '../aiResultsWidgets/floorplan_analysis_card.dart';
 import '../services/roboflow_data_parser.dart';
 import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
 import '../services/supabase_data_service.dart';
+import '../services/ai_response_parser.dart';
 
 class AIResultsPage extends StatefulWidget {
   const AIResultsPage({super.key});
@@ -27,6 +28,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
   String? errorMessage;
   late HomeProvider homeProvider;
   final SupabaseDataService _supabaseService = SupabaseDataService();
+
+  // AI Response data
+  String? aiResponse;
+  String? extractedCost;
+  String? extractedConfidence;
 
   // Timer for checking analysis status
   Timer? _analysisStatusTimer;
@@ -80,7 +86,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
   Future<void> _loadAllData() async {
     if (_isDisposed || !mounted) return;
 
-    await Future.wait([_loadRoboflowData(), _loadSupabaseData()]);
+    await Future.wait([
+      _loadRoboflowData(),
+      _loadSupabaseData(),
+      _loadAIResponse(),
+    ]);
   }
 
   Future<void> _loadRoboflowData() async {
@@ -217,6 +227,48 @@ class _AIResultsPageState extends State<AIResultsPage> {
     }
   }
 
+  Future<void> _loadAIResponse() async {
+    if (_isDisposed || !mounted) return;
+
+    try {
+      print('🔄 Loading AI response...');
+
+      // Get the latest analysis data to get the upload ID
+      final latestData = await _supabaseService.getLatestAnalysisData();
+
+      if (latestData != null && latestData['id'] != null) {
+        // Fetch the AI response using the upload ID
+        final response = await _supabaseService.getAIResponseById(
+          latestData['id'].toString(),
+        );
+
+        if (response != null && response.isNotEmpty) {
+          // Extract cost and confidence from the AI response
+          final cost = AIResponseParser.extractTotalCost(response);
+          final confidence = AIResponseParser.extractConfidence(response);
+
+          if (mounted && !_isDisposed) {
+            setState(() {
+              aiResponse = response;
+              extractedCost = cost;
+              extractedConfidence = confidence;
+            });
+          }
+
+          print('✅ Loaded and parsed AI response successfully');
+          print('💰 Extracted cost: $cost');
+          print('📊 Extracted confidence: $confidence');
+        } else {
+          print('⚠️ No AI response found in database');
+        }
+      } else {
+        print('⚠️ No latest analysis data found for AI response');
+      }
+    } catch (e) {
+      print('❌ Error loading AI response: $e');
+    }
+  }
+
   /// Helper method to safely convert database values to int
   int _safeToInt(dynamic value, {int defaultValue = 0}) {
     if (value == null) return defaultValue;
@@ -297,6 +349,32 @@ class _AIResultsPageState extends State<AIResultsPage> {
       };
     }
     return null;
+  }
+
+  String _getDisplayPrice() {
+    // First try to use extracted cost from AI response
+    if (extractedCost != null && AIResponseParser.isValidCost(extractedCost)) {
+      return extractedCost!;
+    }
+
+    // Fallback to default price
+    return '\$500,000';
+  }
+
+  String _getDisplayConfidence() {
+    // First try to use extracted confidence from AI response
+    if (extractedConfidence != null) {
+      return extractedConfidence!;
+    }
+
+    // Then try confidence score from database
+    final confidenceScore = _getConfidenceScore();
+    if (confidenceScore != null) {
+      return '$confidenceScore%';
+    }
+
+    // Fallback to default confidence
+    return '92%';
   }
 
   Future<void> _handleRetry() async {
@@ -469,13 +547,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
               ),
             ),
           ],
-
-          // Price Prediction Section
-          PricePredictionCard(
-            price: '\$500,000',
-            confidence: confidenceScore != null ? '$confidenceScore%' : '92%',
-          ),
-          const SizedBox(height: 24),
 
           // Dashboard Section with live data
           PropertyDashboardCard(
