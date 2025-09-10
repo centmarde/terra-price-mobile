@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import '../services/image_picker_service.dart';
 import '../services/image_upload_service.dart';
-import '../../aiResult/services/roboflow_fetch.dart';
 import '../services/roboflow_api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;

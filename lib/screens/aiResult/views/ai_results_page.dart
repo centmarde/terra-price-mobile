@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
 // Import widget components
-import '../aiResultsWidgets/price_predicion_card.dart';
+
 import '../aiResultsWidgets/property_dashboard_card.dart';
 import '../aiResultsWidgets/floorplan_analysis_card.dart';
 import '../services/roboflow_data_parser.dart';
 import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
 import '../services/supabase_data_service.dart';
+import '../services/ai_response_parser.dart';
 
 class AIResultsPage extends StatefulWidget {
   const AIResultsPage({super.key});
@@ -28,6 +28,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
   String? errorMessage;
   late HomeProvider homeProvider;
   final SupabaseDataService _supabaseService = SupabaseDataService();
+
+  // AI Response data
+  String? aiResponse;
+  String? extractedCost;
+  String? extractedConfidence;
 
   // Timer for checking analysis status
   Timer? _analysisStatusTimer;
@@ -81,7 +86,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
   Future<void> _loadAllData() async {
     if (_isDisposed || !mounted) return;
 
-    await Future.wait([_loadRoboflowData(), _loadSupabaseData()]);
+    await Future.wait([
+      _loadRoboflowData(),
+      _loadSupabaseData(),
+      _loadAIResponse(),
+    ]);
   }
 
   Future<void> _loadRoboflowData() async {
@@ -215,6 +224,47 @@ class _AIResultsPageState extends State<AIResultsPage> {
           isDashboardLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadAIResponse() async {
+    if (_isDisposed || !mounted) return;
+
+    try {
+      print('🔄 Loading AI response...');
+
+      // Get all analysis data - this includes AI responses
+      final allAnalysisData = await _supabaseService.getAllAnalysisData();
+
+      if (allAnalysisData.isNotEmpty) {
+        // Get the latest analysis (first item since it's ordered by analyzed_at desc)
+        final latestData = allAnalysisData.first;
+        final response = latestData['ai_response'] as String?;
+
+        if (response != null && response.isNotEmpty) {
+          // Extract cost and confidence from the AI response
+          final cost = AIResponseParser.extractTotalCost(response);
+          final confidence = AIResponseParser.extractConfidence(response);
+
+          if (mounted && !_isDisposed) {
+            setState(() {
+              aiResponse = response;
+              extractedCost = cost;
+              extractedConfidence = confidence;
+            });
+          }
+
+          print('✅ Loaded and parsed AI response successfully');
+          print('💰 Extracted cost: $cost');
+          print('📊 Extracted confidence: $confidence');
+        } else {
+          print('⚠️ No AI response found in latest analysis data');
+        }
+      } else {
+        print('⚠️ No analysis data found for AI response');
+      }
+    } catch (e) {
+      print('❌ Error loading AI response: $e');
     }
   }
 
@@ -410,17 +460,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
         ? RoboflowDataParser.extractLabelVisualizationImage(roboflowData!)
         : null;
 
-    // Mock data for trend graph (would be replaced with real data in production)
-    final List<FlSpot> spots = [
-      FlSpot(1, 480),
-      FlSpot(2, 490),
-      FlSpot(3, 500),
-      FlSpot(4, 510),
-      FlSpot(5, 505),
-    ];
-
-    final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80,
@@ -482,13 +521,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
             ),
           ],
 
-          // Price Prediction Section
-          PricePredictionCard(
-            price: '\$500,000',
-            confidence: confidenceScore != null ? '$confidenceScore%' : '92%',
-          ),
-          const SizedBox(height: 24),
-
           // Dashboard Section with live data
           PropertyDashboardCard(
             size: propertyMetrics['size']!,
@@ -510,6 +542,8 @@ class _AIResultsPageState extends State<AIResultsPage> {
             hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
             errorMessage: homeProvider.roboflowErrorMessage,
             onRetry: _handleRetry,
+            aiResponse: aiResponse, // Pass AI response directly
+            isAILoading: aiResponse == null && errorMessage == null,
           ),
           const SizedBox(height: 24),
 
