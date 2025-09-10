@@ -55,7 +55,7 @@ class PDFReportService {
       pw.ImageProvider? aiVisualizationImage;
       pw.ImageProvider? originalImage;
 
-      // Process Roboflow visualization image
+      // Process Computer Vision visualization image
       if (roboflowImageData != null && roboflowImageData.isNotEmpty) {
         try {
           String cleanBase64 = roboflowImageData;
@@ -546,7 +546,7 @@ class PDFReportService {
                     if (confidenceScore != null && !hasAnalysisFailed) ...[
                       pw.SizedBox(height: 5),
                       pw.Text(
-                        'Roboflow AI Analysis • Confidence Score: $confidenceScore%',
+                        'Computer Vision AI Analysis • Confidence Score: $confidenceScore%',
                         style: pw.TextStyle(
                           font: font,
                           fontSize: 10,
@@ -652,7 +652,7 @@ class PDFReportService {
                         padding: const pw.EdgeInsets.symmetric(horizontal: 20),
                         child: pw.Text(
                           errorMessage ??
-                              'Unable to analyze the image with Roboflow AI',
+                              'Unable to analyze the image with Computer Vision AI',
                           style: pw.TextStyle(
                             font: font,
                             fontSize: 12,
@@ -1190,10 +1190,10 @@ class PDFReportService {
                 pw.SizedBox(height: 30),
               ],
 
-              // Roboflow Analysis Section
+              // Computer Vision Analysis Section
               if (roboflowData != null) ...[
                 pw.Text(
-                  'AI Analysis Details',
+                  'Computer Vision Analysis Details',
                   style: pw.TextStyle(
                     font: boldFont,
                     fontSize: 18,
@@ -1215,7 +1215,7 @@ class PDFReportService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Roboflow API Response Summary:',
+                        'Computer Vision API Response Summary:',
                         style: pw.TextStyle(
                           font: boldFont,
                           fontSize: 12,
@@ -1384,7 +1384,7 @@ class PDFReportService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      '• Computer Vision AI Model: Roboflow object detection with custom property analysis workflow',
+                      '• Computer Vision AI Model: Advanced object detection with custom property analysis workflow',
                       style: pw.TextStyle(
                         font: font,
                         fontSize: 12,
@@ -1496,7 +1496,7 @@ class PDFReportService {
                     ),
                     pw.SizedBox(height: 8),
                     pw.Text(
-                      'Powered by AI Property Analysis Technology • Real-time Computer Vision',
+                      'Powered by AI Property Analysis Technology • Computer Vision',
                       style: pw.TextStyle(
                         font: boldFont,
                         fontSize: 12,
@@ -1734,7 +1734,7 @@ class PDFReportService {
     }
 
     if (roboflowData != null) {
-      sources.add('Roboflow AI');
+      sources.add('Computer Vision AI');
     }
 
     if (sources.isEmpty) {
