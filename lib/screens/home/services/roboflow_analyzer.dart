@@ -24,6 +24,25 @@ class RoboflowAnalyzer {
   ///
   /// Returns [RoboflowAnalysisResult] containing success status and data
   Future<RoboflowAnalysisResult> analyzeImage(File imageFile) async {
+    return await analyzeImageWithAI(imageFile, null);
+  }
+
+  /// Analyzes a single image with Roboflow API and includes AI response
+  ///
+  /// This method handles:
+  /// 1. Temporarily uploading the raw image for Roboflow analysis
+  /// 2. Calling the Roboflow API with the image URL
+  /// 3. Extracting and storing only the processed visualization images
+  /// 4. Cleaning up the temporary raw image
+  /// 5. Storing metadata in mobile_uploads table with AI response
+  ///
+  /// [imageFile] - The image file to analyze
+  /// [aiResponse] - AI response from Groq AI (optional)
+  /// Returns [RoboflowAnalysisResult] containing success status and data
+  Future<RoboflowAnalysisResult> analyzeImageWithAI(
+    File imageFile,
+    String? aiResponse,
+  ) async {
     try {
       print('🚀 Starting Roboflow analysis for image: ${imageFile.path}');
 
@@ -66,7 +85,7 @@ class RoboflowAnalyzer {
       }
 
       if (result.success && result.data != null) {
-        return await _processSuccessfulAnalysis(result);
+        return await _processSuccessfulAnalysis(result, aiResponse);
       } else {
         return _processFailedAnalysis(result);
       }
@@ -104,7 +123,10 @@ class RoboflowAnalyzer {
         if (imageUrl != null) {
           final result = await _client.analyzeImageWithResult(imageUrl);
           if (result.success && result.data != null) {
-            final analysisResult = await _processSuccessfulAnalysis(result);
+            final analysisResult = await _processSuccessfulAnalysis(
+              result,
+              null,
+            );
             results.add(analysisResult);
           } else {
             results.add(_processFailedAnalysis(result));
@@ -129,6 +151,7 @@ class RoboflowAnalyzer {
   /// Processes successful analysis results
   Future<RoboflowAnalysisResult> _processSuccessfulAnalysis(
     RoboflowResult result,
+    String? aiResponse,
   ) async {
     print('✅ Successfully received Roboflow analysis result');
     print('🗂️ Response data keys: ${result.data!.keys.toList()}');
@@ -165,6 +188,7 @@ class RoboflowAnalyzer {
       final visualizations = await _extractAndStoreVisualizations(
         result.data!,
         analysisId,
+        aiResponse,
       );
       aiResultsUrls = visualizations['urls'] ?? [];
     } catch (e) {
@@ -193,6 +217,7 @@ class RoboflowAnalyzer {
   Future<Map<String, List<String>>> _extractAndStoreVisualizations(
     Map<String, dynamic> roboflowData,
     String analysisId,
+    String? aiResponse,
   ) async {
     List<String> aiResultsUrls = [];
     List<String> uploadedPaths = [];
@@ -261,6 +286,7 @@ class RoboflowAnalyzer {
           uploadedPaths,
           analysisId,
           roboflowData,
+          aiResponse: aiResponse,
         );
 
         print('🎯 Stored ${aiResultsUrls.length} visualization URLs');

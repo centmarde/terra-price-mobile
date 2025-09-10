@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'key_insight_card.dart';
 
 class FloorplanAnalysisCard extends StatelessWidget {
   final List<String> insights;
@@ -9,6 +10,9 @@ class FloorplanAnalysisCard extends StatelessWidget {
   final bool hasAnalysisFailed; // Whether Roboflow analysis failed
   final String? errorMessage; // Error message if analysis failed
   final VoidCallback? onRetry; // Retry callback
+  final String? aiResponse; // AI analysis response
+  final bool isAILoading; // Whether AI is loading
+  final String? aiErrorMessage; // AI error message
 
   const FloorplanAnalysisCard({
     super.key,
@@ -18,6 +22,9 @@ class FloorplanAnalysisCard extends StatelessWidget {
     this.hasAnalysisFailed = false,
     this.errorMessage,
     this.onRetry,
+    this.aiResponse,
+    this.isAILoading = false,
+    this.aiErrorMessage,
   });
 
   @override
@@ -176,40 +183,10 @@ class FloorplanAnalysisCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Analysis insights
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: hasAnalysisFailed ? Colors.red[50] : Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: hasAnalysisFailed
-                      ? Colors.red[200]!
-                      : Colors.green[200]!,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hasAnalysisFailed ? 'Analysis Status:' : 'Key Insights:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: hasAnalysisFailed
-                          ? Colors.red[800]
-                          : Colors.green[800],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (hasAnalysisFailed)
-                    ..._getFailureInsights().map(
-                      (insight) => _failureInsightItem(insight),
-                    )
-                  else
-                    ...insights.map((insight) => _insightItem(insight)),
-                ],
-              ),
+            KeyInsightCard(
+              response: aiResponse ?? '',
+              isLoading: isAILoading,
+              errorMessage: aiErrorMessage,
             ),
           ],
         ),
@@ -299,35 +276,6 @@ class FloorplanAnalysisCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  List<String> _getFailureInsights() {
-    return [
-      '❌ Unable to connect to Roboflow AI service',
-      '❌ Image analysis could not be completed',
-      '⚠️ Please check your internet connection',
-      '🔄 Try again or use a different image',
-    ];
-  }
-
-  Widget _failureInsightItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 14, color: Colors.red[700], height: 1.3),
-      ),
-    );
-  }
-
-  Widget _insightItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 14, color: Colors.green[700], height: 1.3),
       ),
     );
   }
