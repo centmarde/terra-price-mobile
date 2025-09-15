@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../landing/providers/auth_provider.dart';
+import '../../landing/providers/auth_provider.dart' as landing_auth;
 import '../../landing/services/auth_service.dart';
 import '../widgets/profile_option_card.dart';
-import '../widgets/profile_header.dart';
+import '../widgets/profile_header.dart'; // Add this import for ProfileHeader
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -12,100 +12,103 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80.h,
-        title: Text(
-          'Profile',
-          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 80.h,
+          title: Text(
+            'Profile',
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.green,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
         ),
-        elevation: 0,
-        backgroundColor: Colors.green,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Profile Header
-              const ProfileHeader(),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Profile Header
+                const ProfileHeader(),
 
-              SizedBox(height: 32.h),
+                SizedBox(height: 32.h),
 
-              // Profile options
-              ProfileOptionCard(
-                icon: Icons.edit,
-                title: 'Edit Profile',
-                subtitle: 'Update your personal information',
-                onTap: () {
-                  // Navigate to edit profile
-                },
-              ),
-
-              ProfileOptionCard(
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: 'Manage your notification preferences',
-                onTap: () {
-                  // Navigate to notifications settings
-                },
-              ),
-
-              ProfileOptionCard(
-                icon: Icons.security,
-                title: 'Security',
-                subtitle: 'Change password and security settings',
-                onTap: () {
-                  // Navigate to security settings
-                },
-              ),
-
-              ProfileOptionCard(
-                icon: Icons.help_outline,
-                title: 'Help & Support',
-                subtitle: 'Get help or contact support',
-                onTap: () {
-                  // Navigate to help
-                },
-              ),
-
-              ProfileOptionCard(
-                icon: Icons.info_outline,
-                title: 'About',
-                subtitle: 'App version and information',
-                onTap: () {
-                  // Show about dialog
-                },
-              ),
-
-              SizedBox(height: 24.h),
-
-              // Logout button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _handleLogout(context);
+                // Profile options
+                ProfileOptionCard(
+                  icon: Icons.edit,
+                  title: 'Edit Profile',
+                  subtitle: 'Update your personal information',
+                  onTap: () {
+                    // Navigate to edit profile
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                    foregroundColor: Theme.of(context).colorScheme.onError,
-                    padding: EdgeInsets.symmetric(vertical: 16.h),
-                  ),
-                  child: Text(
-                    'Logout',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
+                ),
+
+                ProfileOptionCard(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: 'Manage your notification preferences',
+                  onTap: () {
+                    // Navigate to notifications settings
+                  },
+                ),
+
+                ProfileOptionCard(
+                  icon: Icons.security,
+                  title: 'Security',
+                  subtitle: 'Change password and security settings',
+                  onTap: () {
+                    // Navigate to security settings
+                  },
+                ),
+
+                ProfileOptionCard(
+                  icon: Icons.help_outline,
+                  title: 'Help & Support',
+                  subtitle: 'Get help or contact support',
+                  onTap: () {
+                    // Navigate to help
+                  },
+                ),
+
+                ProfileOptionCard(
+                  icon: Icons.info_outline,
+                  title: 'About',
+                  subtitle: 'App version and information',
+                  onTap: () {
+                    // Show about dialog
+                  },
+                ),
+
+                SizedBox(height: 24.h),
+
+                // Logout button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _handleLogout(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                    ),
+                    child: Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              SizedBox(height: 24.h),
-            ],
+                SizedBox(height: 24.h),
+              ],
+            ),
           ),
         ),
       ),
@@ -120,7 +123,7 @@ class ProfilePage extends StatelessWidget {
       if (result.isSuccess && context.mounted) {
         // Clear auth provider state
         if (context.mounted) {
-          context.read<AuthProvider>().clearMessages();
+          context.read<landing_auth.AuthProvider>().clearMessages();
         }
 
         // Show success message

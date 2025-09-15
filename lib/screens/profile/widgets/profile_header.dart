@@ -1,9 +1,37 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import '../providers/profile_provider.dart';
-import '../../landing/providers/auth_provider.dart';
+// lib/screens/profile/widgets/profile_header.dart
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// AuthProvider to fetch email from Supabase
+class AuthProvider with ChangeNotifier {
+  String _email = '';
+  String _fullName = '';
+  String get email => _email;
+  String get fullName => _fullName;
+
+  Future<void> fetchUserDataFromSupabase() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      _email = user.email ?? '';
+      // Fetch full_name from public.profiles
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+      if (response['full_name'] != null) {
+        _fullName = response['full_name'] as String;
+      } else {
+        _fullName = '';
+      }
+      notifyListeners();
+    }
+  }
+}
+
+// ProfileHeader widget
 class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key});
 
@@ -13,170 +41,56 @@ class ProfileHeader extends StatefulWidget {
 
 class _ProfileHeaderState extends State<ProfileHeader> {
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Load profile data when dependencies change (safer than initState)
+  void initState() {
+    super.initState();
+    // Fetch user data when header is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final profileProvider = context.read<ProfileProvider>();
-        if (profileProvider.profile == null && !profileProvider.isLoading) {
-          profileProvider.loadProfile();
-        }
-      }
+      context.read<AuthProvider>().fetchUserDataFromSupabase();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ProfileProvider, AuthProvider>(
-      builder: (context, profileProvider, authProvider, child) {
-        // Show loading state
-        if (profileProvider.isLoading) {
-          return Column(
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        final email = authProvider.email;
+        final fullName = authProvider.fullName;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          // Removed color: Colors.blue
+          child: Row(
             children: [
-              CircleAvatar(
-                radius: 50.r,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withOpacity(0.1),
-                child: CircularProgressIndicator(
-                  strokeWidth: 3.0,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              const CircleAvatar(
+                radius: 30,
+                child: Icon(Icons.person, size: 40),
               ),
-              SizedBox(height: 16.h),
-              Text(
-                'Loading profile...',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          );
-        }
-
-        // Show error state
-        if (profileProvider.error != null) {
-          return Column(
-            children: [
-              CircleAvatar(
-                radius: 50.r,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.error.withOpacity(0.1),
-                child: Icon(
-                  Icons.error_outline,
-                  size: 50.w,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                'Error loading profile',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                profileProvider.error!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8.h),
-              ElevatedButton(
-                onPressed: () => profileProvider.loadProfile(),
-                child: const Text('Retry'),
-              ),
-            ],
-          );
-        }
-
-        final profile = profileProvider.profile;
-        final email = authProvider.email.isNotEmpty
-            ? authProvider.email
-            : 'jetross@example.com'; // Default with current user
-
-        return Column(
-          children: [
-            // Profile avatar
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50.r,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.1),
-                  backgroundImage: profile?.avatarUrl != null
-                      ? NetworkImage(profile!.avatarUrl!)
-                      : null,
-                  child: profile?.avatarUrl == null
-                      ? Icon(
-                          Icons.person,
-                          size: 50.w,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : null,
-                ),
-
-                // Edit button
-              ],
-            ),
-
-            SizedBox(height: 16.h),
-
-            // User name
-            Text(
-              profile?.fullName ?? email.split('@').first.capitalize(),
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-
-            SizedBox(height: 8.h),
-
-            // User email
-            Text(
-              email,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-
-            // Bio section (if exists)
-            if (profile?.bio != null && profile!.bio!.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  profile.bio!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
-                  textAlign: TextAlign.center,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName.isNotEmpty ? fullName : 'Loading...',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Color.fromARGB(255, 27, 27, 27),
+                      ),
+                    ),
+                    Text(
+                      email.isNotEmpty ? email : 'Loading...',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color.fromARGB(179, 29, 29, 29),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ],
+          ),
         );
       },
     );
-  }
-}
-
-// Extension to capitalize first letter
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }
