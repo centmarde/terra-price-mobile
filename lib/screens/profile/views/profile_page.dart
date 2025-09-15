@@ -6,6 +6,7 @@ import '../../landing/services/auth_service.dart';
 import '../widgets/profile_option_card.dart';
 import '../widgets/profile_header.dart'; // Add this import for ProfileHeader
 import 'edit_profile_screen.dart';
+import 'notifications_screen.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -35,10 +36,7 @@ class ProfilePage extends StatelessWidget {
                 // Profile Header
                 const ProfileHeader(),
 
-                SizedBox(height: 24.h),
-
-                // ...existing code...
-                SizedBox(height: 24.h),
+                SizedBox(height: 12.h),
 
                 // Edit Profile section (styled like other options)
                 ProfileOptionCard(
@@ -62,16 +60,11 @@ class ProfilePage extends StatelessWidget {
                   title: 'Notifications',
                   subtitle: 'Manage your notification preferences',
                   onTap: () {
-                    // Navigate to notifications settings
-                  },
-                ),
-
-                ProfileOptionCard(
-                  icon: Icons.security,
-                  title: 'Security',
-                  subtitle: 'Change password and security settings',
-                  onTap: () {
-                    // Navigate to security settings
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationsScreen(),
+                      ),
+                    );
                   },
                 ),
 
