@@ -8,6 +8,7 @@ import '../widgets/profile_header.dart'; // Add this import for ProfileHeader
 import 'edit_profile_screen.dart';
 import 'notifications_screen.dart';
 import 'help_support_screen.dart';
+import 'about_screen.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -87,7 +88,11 @@ class ProfilePage extends StatelessWidget {
                   title: 'About',
                   subtitle: 'App version and information',
                   onTap: () {
-                    // Show about dialog
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AboutScreen(),
+                      ),
+                    );
                   },
                 ),
 
