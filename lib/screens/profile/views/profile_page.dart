@@ -7,6 +7,7 @@ import '../widgets/profile_option_card.dart';
 import '../widgets/profile_header.dart'; // Add this import for ProfileHeader
 import 'edit_profile_screen.dart';
 import 'notifications_screen.dart';
+import 'help_support_screen.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -73,7 +74,11 @@ class ProfilePage extends StatelessWidget {
                   title: 'Help & Support',
                   subtitle: 'Get help or contact support',
                   onTap: () {
-                    // Navigate to help
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const HelpSupportScreen(),
+                      ),
+                    );
                   },
                 ),
 
