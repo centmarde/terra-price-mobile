@@ -5,6 +5,7 @@ import '../../landing/providers/auth_provider.dart' as landing_auth;
 import '../../landing/services/auth_service.dart';
 import '../widgets/profile_option_card.dart';
 import '../widgets/profile_header.dart'; // Add this import for ProfileHeader
+import 'edit_profile_screen.dart';
 
 /// Profile page widget - user profile and account information
 class ProfilePage extends StatelessWidget {
@@ -34,18 +35,28 @@ class ProfilePage extends StatelessWidget {
                 // Profile Header
                 const ProfileHeader(),
 
-                SizedBox(height: 32.h),
+                SizedBox(height: 24.h),
 
-                // Profile options
+                // ...existing code...
+                SizedBox(height: 24.h),
+
+                // Edit Profile section (styled like other options)
                 ProfileOptionCard(
                   icon: Icons.edit,
                   title: 'Edit Profile',
                   subtitle: 'Update your personal information',
                   onTap: () {
-                    // Navigate to edit profile
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen(),
+                      ),
+                    );
                   },
                 ),
 
+                SizedBox(height: 16.h),
+
+                // Profile options
                 ProfileOptionCard(
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',

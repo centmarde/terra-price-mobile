@@ -11,6 +11,14 @@ class AuthProvider with ChangeNotifier {
   String get email => _email;
   String get fullName => _fullName;
 
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<void> fetchUserDataFromSupabase() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
@@ -26,7 +34,9 @@ class AuthProvider with ChangeNotifier {
       } else {
         _fullName = '';
       }
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
     }
   }
 }
@@ -45,7 +55,9 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     super.initState();
     // Fetch user data when header is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().fetchUserDataFromSupabase();
+      if (mounted) {
+        context.read<AuthProvider>().fetchUserDataFromSupabase();
+      }
     });
   }
 
@@ -73,14 +85,14 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                     Text(
                       fullName.isNotEmpty ? fullName : 'Loading...',
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 18,
                         color: Color.fromARGB(255, 27, 27, 27),
                       ),
                     ),
                     Text(
                       email.isNotEmpty ? email : 'Loading...',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Color.fromARGB(179, 29, 29, 29),
                       ),
                     ),
