@@ -34,7 +34,7 @@ class UploadActionsGrid extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: 16.w,
           mainAxisSpacing: 16.h,
-          childAspectRatio: 1.1,
+          childAspectRatio: 0.9, // Even more height for cards
           children: [
             ActionCard(
               icon: Icons.camera_alt_outlined,
@@ -55,10 +55,10 @@ class UploadActionsGrid extends StatelessWidget {
               onTap: onRecentImagesPressed,
             ),
             ActionCard(
-              icon: Icons.upload_file_outlined,
-              title: 'Upload Files',
-              subtitle: 'Browse documents',
-              onTap: onUploadFilesPressed,
+              icon: Icons.schedule,
+              title: 'History',
+              subtitle: 'View your recent uploads and actions',
+              onTap: onRecentImagesPressed,
             ),
           ],
         ),
