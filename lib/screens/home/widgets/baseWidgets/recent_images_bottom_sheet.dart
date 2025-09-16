@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import '../../../aiResult/services/supabase_data_service.dart';
 
 class RecentImagesBottomSheet extends StatelessWidget {
@@ -33,7 +35,7 @@ class RecentImagesBottomSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Images',
+                  'Recent AI Result',
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
@@ -63,7 +65,7 @@ class RecentImagesBottomSheet extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.photo_library_outlined,
+                          Icons.insert_drive_file_outlined,
                           size: 48.sp,
                           color: Colors.grey,
                         ),
@@ -88,53 +90,73 @@ class RecentImagesBottomSheet extends StatelessWidget {
                   );
                 }
                 final data = snapshot.data!;
-                final imageUrl = data['image_url'] as String?;
-                final analyzedAt = data['analyzed_at'] as String?;
                 final fileName = data['file_name'] as String?;
+                final analyzedAt = data['analyzed_at'] as String?;
                 DateTime? dateTime;
                 if (analyzedAt != null) {
                   dateTime = DateTime.tryParse(analyzedAt);
                 }
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (imageUrl != null)
-                      ClipRRect(
+                return Center(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12.r),
+                    onTap: () {
+                      // Navigate to AI result page using GoRouter
+                      Navigator.pop(context); // Close the bottom sheet
+                      context.go('/ai_results_page');
+                    },
+                    child: Container(
+                      padding: EdgeInsets.all(20.w),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12.r),
-                        child: Image.network(
-                          imageUrl,
-                          width: 160.w,
-                          height: 160.w,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    else
-                      Icon(
-                        Icons.photo_library_outlined,
-                        size: 48.sp,
-                        color: Colors.grey,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    SizedBox(height: 16.h),
-                    if (fileName != null)
-                      Text(
-                        fileName,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.insert_drive_file_outlined,
+                            size: 40.sp,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          SizedBox(height: 12.h),
+                          if (fileName != null)
+                            Text(
+                              fileName,
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          if (dateTime != null)
+                            Text(
+                              '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}  '
+                              '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.grey[600],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Tap to view AI result',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                    if (dateTime != null)
-                      Text(
-                        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}  '
-                        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                  ],
+                    ),
+                  ),
                 );
               },
             ),

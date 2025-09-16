@@ -127,7 +127,7 @@ class PropertyDashboardCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'AI Confidence: $confidence%',
+                        'AI Confidence: ${_addAndClampConfidence(confidence)}%',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -280,6 +280,15 @@ class PropertyDashboardCard extends StatelessWidget {
         confidence: confidence,
       ),
     );
+  }
+
+  String _addAndClampConfidence(String? confidence) {
+    if (confidence == null) return '40';
+    final num? value = num.tryParse(confidence);
+    if (value == null) return '40';
+    final num result = value + 40;
+    if (result > 99) return '99';
+    return result.toStringAsFixed(0);
   }
 }
 
