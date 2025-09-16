@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'action_card.dart';
 
+import '../../../aiResult/services/supabase_data_service.dart';
+
 class UploadActionsGrid extends StatelessWidget {
   final VoidCallback onCameraPressed;
   final VoidCallback onGalleryPressed;
@@ -34,7 +36,7 @@ class UploadActionsGrid extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: 16.w,
           mainAxisSpacing: 16.h,
-          childAspectRatio: 0.9, // Even more height for cards
+          childAspectRatio: 0.9,
           children: [
             ActionCard(
               icon: Icons.camera_alt_outlined,
@@ -48,11 +50,42 @@ class UploadActionsGrid extends StatelessWidget {
               subtitle: 'Choose from gallery',
               onTap: onGalleryPressed,
             ),
-            ActionCard(
-              icon: Icons.history_outlined,
-              title: 'Recent Images',
-              subtitle: 'View recently taken photos',
-              onTap: onRecentImagesPressed,
+            // Recent AI Result card (same structure as History, unique icon, no image)
+            FutureBuilder<Map<String, dynamic>?>(
+              future: SupabaseDataService().getLatestAnalysisData(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return ActionCard(
+                    icon: Icons.insights_outlined,
+                    title: 'Recent AI Result',
+                    subtitle: 'Loading...',
+                    onTap: onRecentImagesPressed,
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return ActionCard(
+                    icon: Icons.insights_outlined,
+                    title: 'Recent AI Result',
+                    subtitle: 'No recent AI results',
+                    onTap: onRecentImagesPressed,
+                  );
+                }
+                final data = snapshot.data!;
+                final analyzedAt = data['analyzed_at'] as String?;
+                DateTime? dateTime;
+                if (analyzedAt != null) {
+                  dateTime = DateTime.tryParse(analyzedAt);
+                }
+                return ActionCard(
+                  icon: Icons.insights_outlined,
+                  title: 'Recent AI Result',
+                  subtitle: data['file_name'] != null
+                      ? data['file_name']
+                      : 'View most recent result',
+                  dateTime: dateTime,
+                  onTap: onRecentImagesPressed,
+                );
+              },
             ),
             ActionCard(
               icon: Icons.schedule,

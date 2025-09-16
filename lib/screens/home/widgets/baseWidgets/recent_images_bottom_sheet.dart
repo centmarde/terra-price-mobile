@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../aiResult/services/supabase_data_service.dart';
 
 class RecentImagesBottomSheet extends StatelessWidget {
   const RecentImagesBottomSheet({super.key});
@@ -50,27 +51,92 @@ class RecentImagesBottomSheet extends StatelessWidget {
 
           // Content
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.photo_library_outlined,
-                    size: 48.sp,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Recent Images feature coming soon',
-                    style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Use camera or gallery for now',
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
+            child: FutureBuilder<Map<String, dynamic>?>(
+              future: SupabaseDataService().getLatestAnalysisData(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.photo_library_outlined,
+                          size: 48.sp,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          'No recent AI results',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Use camera or gallery for now',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final data = snapshot.data!;
+                final imageUrl = data['image_url'] as String?;
+                final analyzedAt = data['analyzed_at'] as String?;
+                final fileName = data['file_name'] as String?;
+                DateTime? dateTime;
+                if (analyzedAt != null) {
+                  dateTime = DateTime.tryParse(analyzedAt);
+                }
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (imageUrl != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Image.network(
+                          imageUrl,
+                          width: 160.w,
+                          height: 160.w,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.photo_library_outlined,
+                        size: 48.sp,
+                        color: Colors.grey,
+                      ),
+                    SizedBox(height: 16.h),
+                    if (fileName != null)
+                      Text(
+                        fileName,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    if (dateTime != null)
+                      Text(
+                        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}  '
+                        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
