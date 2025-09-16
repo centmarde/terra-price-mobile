@@ -127,7 +127,7 @@ class PropertyDashboardCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'AI Confidence: ${_addAndClampConfidence(confidence)}%',
+                        'AI Confidence: ${PropertyDashboardCard.addAndClampConfidence(confidence)}%',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -282,7 +282,7 @@ class PropertyDashboardCard extends StatelessWidget {
     );
   }
 
-  String _addAndClampConfidence(String? confidence) {
+  static String addAndClampConfidence(String? confidence) {
     if (confidence == null) return '40';
     final num? value = num.tryParse(confidence);
     if (value == null) return '40';
@@ -388,7 +388,7 @@ class _DetailedAnalysisModal extends StatelessWidget {
                           const SizedBox(width: 12),
                           Flexible(
                             child: Text(
-                              '$confidence% Confidence',
+                              '${PropertyDashboardCard.addAndClampConfidence(confidence)}% Confidence',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -400,6 +400,7 @@ class _DetailedAnalysisModal extends StatelessWidget {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 24),
                   ],
 
