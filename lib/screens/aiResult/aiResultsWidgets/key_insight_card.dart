@@ -1,5 +1,46 @@
 import 'package:flutter/material.dart';
 
+// Modern skeleton loader for KeyInsightCard
+class _KeyInsightSkeleton extends StatelessWidget {
+  const _KeyInsightSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.amber[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(width: 100, height: 18, color: Colors.amber[100]),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(width: 80, height: 16, color: Colors.amber[100]),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              height: 60,
+              color: Colors.amber[50],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Extracts and adjusts confidence from the response string
 String? _extractAdjustedConfidence(String? response) {
   if (response == null) return null;
@@ -29,6 +70,9 @@ class KeyInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const _KeyInsightSkeleton();
+    }
     final adjustedConfidence = _extractAdjustedConfidence(response);
     return Card(
       elevation: 4,

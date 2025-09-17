@@ -1,7 +1,28 @@
+import 'dart:isolate';
 import 'dart:developer' as developer;
 
 /// Utility class for parsing AI responses
 class AIResponseParser {
+  /// Runs a parsing function in a Dart isolate for heavy AI response parsing
+  static Future<T> runInIsolate<T, P>(T Function(P) func, P param) async {
+    final p = ReceivePort();
+    await Isolate.spawn(_isolateEntry, [func, param, p.sendPort]);
+    return await p.first as T;
+  }
+
+  static void _isolateEntry(List<dynamic> args) {
+    final func = args[0] as Function;
+    final param = args[1];
+    final sendPort = args[2] as SendPort;
+    final result = func(param);
+    sendPort.send(result);
+  }
+
+  /// Example usage: await AIResponseParser.parseConfidenceAsync(response)
+  static Future<String?> parseConfidenceAsync(String? aiResponse) {
+    return runInIsolate(extractConfidence, aiResponse);
+  }
+
   /// Extracts the total estimated cost from AI response text
   ///
   /// Looks for patterns like:
