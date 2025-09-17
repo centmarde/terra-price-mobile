@@ -120,10 +120,31 @@ class RecentImagesBottomSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.insert_drive_file_outlined,
-                            size: 40.sp,
-                            color: Theme.of(context).colorScheme.primary,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: data['file_path'] != null
+                                ? Image.network(
+                                    data['file_path']!,
+                                    width: 120.w,
+                                    height: 120.w,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.insert_drive_file_outlined,
+                                        size: 40.sp,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      );
+                                    },
+                                  )
+                                : Icon(
+                                    Icons.insert_drive_file_outlined,
+                                    size: 40.sp,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                           ),
                           SizedBox(height: 12.h),
                           if (fileName != null)
