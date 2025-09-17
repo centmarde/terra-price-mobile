@@ -43,7 +43,21 @@ class _AIResultsPageState extends State<AIResultsPage> {
     super.initState();
     homeProvider = Provider.of<HomeProvider>(context, listen: false);
     print('🚀 AIResultsPage initialized');
-    _loadAllData();
+
+    // Check if extra data was passed from GoRouter (recent AI result)
+    final extra = GoRouter.of(
+      context,
+    ).routerDelegate.currentConfiguration.extra;
+    if (extra != null && extra is Map<String, dynamic>) {
+      supabaseData = extra;
+      print('🟢 Loaded AI result from navigation extra: $supabaseData');
+      setState(() {
+        isLoading = false;
+        isDashboardLoading = false;
+      });
+    } else {
+      _loadAllData();
+    }
 
     // Listen for analysis completion
     _startListeningForAnalysisCompletion();

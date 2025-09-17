@@ -100,9 +100,9 @@ class RecentImagesBottomSheet extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12.r),
                     onTap: () {
-                      // Navigate to AI result page using GoRouter
+                      // Navigate to AI result page using GoRouter and pass data
                       Navigator.pop(context); // Close the bottom sheet
-                      context.go('/ai_results_page');
+                      context.go('/ai_results_page', extra: data);
                     },
                     child: Container(
                       padding: EdgeInsets.all(20.w),
