@@ -4,12 +4,15 @@ import 'dart:io';
 import '../services/image_picker_service.dart';
 import '../services/image_upload_service.dart';
 import '../services/roboflow_api_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:developer' as developer;
 
 class HomeProvider extends ChangeNotifier {
   final ImagePickerService _imagePickerService = ImagePickerService();
   final ImageUploadService _uploadService = ImageUploadService();
   final RoboflowApiService _roboflowService = RoboflowApiService();
   final PageController _pageController = PageController();
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   // Navigation properties
   int _currentIndex = 0;
@@ -27,6 +30,9 @@ class HomeProvider extends ChangeNotifier {
   Function(String)? _navigationCallback; // Callback for navigation
   bool _isAnalysisInProgress = false; // Track if analysis is currently running
 
+  // Authentication state
+  bool _isSessionValid = true;
+
   // Navigation getters
   PageController get pageController => _pageController;
   int get currentIndex => _currentIndex;
@@ -42,6 +48,58 @@ class HomeProvider extends ChangeNotifier {
   bool get roboflowAnalysisFailed => _roboflowAnalysisFailed;
   String? get roboflowErrorMessage => _roboflowErrorMessage;
   bool get isAnalysisInProgress => _isAnalysisInProgress;
+
+  // Authentication getters
+  bool get isSessionValid => _isSessionValid;
+
+  /// Check if the current session is valid
+  Future<bool> _checkSessionValidity() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      final session = _supabase.auth.currentSession;
+
+      if (user == null || session == null) {
+        developer.log('❌ No user or session found');
+        _isSessionValid = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Check if session is expired
+      final now = DateTime.now();
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        session.expiresAt! * 1000,
+      );
+
+      if (now.isAfter(expiresAt)) {
+        developer.log('❌ Session expired, attempting to refresh...');
+
+        try {
+          final response = await _supabase.auth.refreshSession();
+          if (response.session != null) {
+            developer.log('✅ Session refreshed successfully');
+            _isSessionValid = true;
+          } else {
+            developer.log('❌ Failed to refresh session');
+            _isSessionValid = false;
+          }
+        } catch (e) {
+          developer.log('❌ Error refreshing session: $e');
+          _isSessionValid = false;
+        }
+      } else {
+        _isSessionValid = true;
+      }
+
+      notifyListeners();
+      return _isSessionValid;
+    } catch (e) {
+      developer.log('❌ Error checking session validity: $e');
+      _isSessionValid = false;
+      notifyListeners();
+      return false;
+    }
+  }
 
   // Set navigation callback
   void setNavigationCallback(Function(String)? callback) {
@@ -85,6 +143,9 @@ class HomeProvider extends ChangeNotifier {
     try {
       print('📷 Starting camera image capture...');
 
+      // Check session validity before proceeding
+      await _checkSessionValidity();
+
       // Reset previous states
       _roboflowAnalysisFailed = false;
       _roboflowErrorMessage = null;
@@ -121,6 +182,9 @@ class HomeProvider extends ChangeNotifier {
     try {
       print('🖼️ Starting gallery image selection...');
 
+      // Check session validity before proceeding
+      await _checkSessionValidity();
+
       // Reset previous states
       _roboflowAnalysisFailed = false;
       _roboflowErrorMessage = null;
@@ -155,6 +219,9 @@ class HomeProvider extends ChangeNotifier {
 
   Future<String?> pickMultipleImages() async {
     try {
+      // Check session validity before proceeding
+      await _checkSessionValidity();
+
       final images = await _imagePickerService.pickMultipleImages();
       if (images.isNotEmpty) {
         _selectedImages.addAll(images);
@@ -175,6 +242,12 @@ class HomeProvider extends ChangeNotifier {
   Future<String?> uploadImages() async {
     if (_selectedImages.isEmpty) return null;
 
+    // Check session validity before uploading
+    final isValid = await _checkSessionValidity();
+    if (!isValid) {
+      return 'Session expired. Please log in again.';
+    }
+
     _isUploading = true;
     notifyListeners();
 
@@ -191,7 +264,7 @@ class HomeProvider extends ChangeNotifier {
 
       // Log results
       for (var result in results) {
-        print('� Roboflow analysis result: $result');
+        print('🔍 Roboflow analysis result: $result');
       }
 
       _selectedImages.clear();
@@ -225,6 +298,9 @@ class HomeProvider extends ChangeNotifier {
     }
 
     print('🔄 Retrying Roboflow analysis...');
+
+    // Check session validity before retrying
+    await _checkSessionValidity();
 
     // Reset failure state
     _roboflowAnalysisFailed = false;

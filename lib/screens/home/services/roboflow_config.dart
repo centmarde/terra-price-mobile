@@ -2,7 +2,8 @@
 class RoboflowConfig {
   // Roboflow API configuration
   static const String baseUrl =
-      'https://serverless.roboflow.com/infer/workflows/test-cmoub/terra-price';
+      // 'https://serverless.roboflow.com/infer/workflows/test-cmoub/terra-price';
+      'https://detect.roboflow.com/infer/workflows/test-cmoub/terra-price';
   static const String apiKey = 'Zub42A5wGM8poDgcI18Q';
 
   // Image processing settings

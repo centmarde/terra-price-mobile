@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
+import 'roboflow_class_extractor.dart';
+import '../../aiResult/services/services.dart';
 
 class ImageUploadService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -92,11 +94,14 @@ class ImageUploadService {
 
   /// Store metadata for processed images from Roboflow analysis
   /// Only stores metadata for the last processed image to avoid duplicates
+  /// Now includes Groq AI analysis response
   Future<void> storeProcessedImageMetadata(
     List<String> processedFilePaths,
     String analysisId,
-    Map<String, dynamic> roboflowData,
-  ) async {
+    Map<String, dynamic> roboflowData, {
+    File? originalImageFile,
+    String? aiResponse,
+  }) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('User not authenticated');
@@ -108,14 +113,57 @@ class ImageUploadService {
     }
 
     try {
+      // Extract individual object counts for database columns
+      final objectCounts = RoboflowClassExtractor.extractIndividualCounts(
+        roboflowData,
+      );
+
       // Store only the last processed image to avoid duplicates
       final lastFilePath = processedFilePaths.last;
       final fileName = lastFilePath.split('/').last;
       final fullUrl =
           'https://gqxhltrjxuiuyveiqtsf.supabase.co/storage/v1/object/public/ai_results/$lastFilePath';
 
-      // Insert metadata record for the last processed image
-      await _supabase.from('mobile_uploads').insert({
+      // Use provided AI response or analyze with Groq AI if original image file is provided
+      String? finalAiResponse = aiResponse;
+      if (finalAiResponse == null && originalImageFile != null) {
+        try {
+          print('🤖 Starting Groq AI analysis for floor plan...');
+          final groqResponse = await GroqAIService.analyzeFloorPlanFromFile(
+            imageFile: originalImageFile,
+            customPrompt:
+                'Please analyze this floor plan and provide a detailed construction cost estimate with breakdown.',
+          );
+
+          // Extract the AI response content
+          if (groqResponse.choices.isNotEmpty) {
+            finalAiResponse = groqResponse.choices.first.message.content;
+            print('✅ Groq AI analysis completed successfully');
+            print(
+              '📝 AI Response length: ${finalAiResponse.length} characters',
+            );
+          } else {
+            print('⚠️ Groq AI returned empty response');
+            finalAiResponse =
+                'No analysis available - empty response from AI service';
+          }
+        } catch (e) {
+          print('❌ Groq AI analysis failed: $e');
+          finalAiResponse = 'AI analysis failed: ${e.toString()}';
+        }
+      }
+
+      // Set default response if none provided
+      if (finalAiResponse == null) {
+        print(
+          '⚠️ No AI response provided and no original image file for analysis',
+        );
+        finalAiResponse =
+            'No AI analysis available - neither response nor original image provided';
+      }
+
+      // Prepare the insert data with object counts and AI response
+      final insertData = {
         'user_id': userId,
         'file_name': fileName,
         'file_path': fullUrl,
@@ -124,9 +172,28 @@ class ImageUploadService {
         'roboflow_data': roboflowData, // jsonB Store the full analysis data
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      });
+        'analyzed_at': DateTime.now().toIso8601String(),
+        // Add object counts
+        'doors': objectCounts['doors'],
+        'rooms': objectCounts['rooms'],
+        'window': objectCounts['window'],
+        'sofa': objectCounts['sofa'],
+        'large_sofa': objectCounts['large_sofa'],
+        'sink': objectCounts['sink'],
+        'large_sink': objectCounts['large_sink'],
+        'twin_sink': objectCounts['twin_sink'],
+        'tub': objectCounts['tub'],
+        'coffee_table': objectCounts['coffee_table'],
+        'total_detections': objectCounts['total_detections'],
+        'confidence_score': objectCounts['confidence_score'],
+        'ai_response': finalAiResponse, // Store AI response from Groq AI
+      };
+
+      // Insert metadata record for the last processed image
+      await _supabase.from('mobile_uploads').insert(insertData);
 
       print('📝 Stored metadata for last processed image: $fileName');
+      print('🔢 Object counts: $objectCounts');
       print(
         '🔗 Total processed images: ${processedFilePaths.length}, stored: 1 (last)',
       );

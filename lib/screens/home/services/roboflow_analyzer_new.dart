@@ -6,7 +6,7 @@ import 'roboflow_client.dart';
 import 'roboflow_models.dart';
 import 'roboflow_class_extractor.dart';
 import 'image_upload_service.dart';
-import '../../aiResult/aiResultsWidgets/roboflow_data_parser.dart';
+import '../../aiResult/services/roboflow_data_parser.dart';
 
 /// High-level service for analyzing images with Roboflow
 class RoboflowAnalyzer {
@@ -66,7 +66,7 @@ class RoboflowAnalyzer {
       }
 
       if (result.success && result.data != null) {
-        return await _processSuccessfulAnalysis(result);
+        return await _processSuccessfulAnalysis(result, imageFile);
       } else {
         return _processFailedAnalysis(result);
       }
@@ -104,7 +104,10 @@ class RoboflowAnalyzer {
         if (imageUrl != null) {
           final result = await _client.analyzeImageWithResult(imageUrl);
           if (result.success && result.data != null) {
-            final analysisResult = await _processSuccessfulAnalysis(result);
+            final analysisResult = await _processSuccessfulAnalysis(
+              result,
+              null,
+            );
             results.add(analysisResult);
           } else {
             results.add(_processFailedAnalysis(result));
@@ -129,6 +132,7 @@ class RoboflowAnalyzer {
   /// Processes successful analysis results
   Future<RoboflowAnalysisResult> _processSuccessfulAnalysis(
     RoboflowResult result,
+    File? originalImageFile,
   ) async {
     print('✅ Successfully received Roboflow analysis result');
     print('🗂️ Response data keys: ${result.data!.keys.toList()}');
@@ -165,6 +169,7 @@ class RoboflowAnalyzer {
       final visualizations = await _extractAndStoreVisualizations(
         result.data!,
         analysisId,
+        originalImageFile,
       );
       aiResultsUrls = visualizations['urls'] ?? [];
     } catch (e) {
@@ -193,6 +198,7 @@ class RoboflowAnalyzer {
   Future<Map<String, List<String>>> _extractAndStoreVisualizations(
     Map<String, dynamic> roboflowData,
     String analysisId,
+    File? originalImageFile,
   ) async {
     List<String> aiResultsUrls = [];
     List<String> uploadedPaths = [];
@@ -261,6 +267,7 @@ class RoboflowAnalyzer {
           uploadedPaths,
           analysisId,
           roboflowData,
+          originalImageFile: originalImageFile,
         );
 
         print('🎯 Stored ${aiResultsUrls.length} visualization URLs');

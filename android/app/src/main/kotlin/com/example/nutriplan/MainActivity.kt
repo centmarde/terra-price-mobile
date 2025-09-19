@@ -1,4 +1,4 @@
-package com.example.nutriplan
+package com.example.terraPrice
 
 import io.flutter.embedding.android.FlutterActivity
 
