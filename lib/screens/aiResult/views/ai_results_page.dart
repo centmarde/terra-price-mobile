@@ -12,6 +12,7 @@ import '../aiResultsWidgets/download_report_card.dart';
 import '../../home/providers/home_provider.dart';
 import '../services/supabase_data_service.dart';
 import '../services/ai_response_parser.dart';
+import '../services/ai_results_service.dart';
 
 class AIResultsPage extends StatefulWidget {
   const AIResultsPage({super.key});
@@ -26,8 +27,10 @@ class _AIResultsPageState extends State<AIResultsPage> {
   bool isLoading = true;
   bool isDashboardLoading = true;
   String? errorMessage;
+  String? aiGeneratedImageUrl;
   late HomeProvider homeProvider;
   final SupabaseDataService _supabaseService = SupabaseDataService();
+  final AIResultsService _aiResultsService = AIResultsService();
 
   // AI Response data
   String? aiResponse;
@@ -43,7 +46,27 @@ class _AIResultsPageState extends State<AIResultsPage> {
     super.initState();
     homeProvider = Provider.of<HomeProvider>(context, listen: false);
     print('🚀 AIResultsPage initialized');
-    _loadAllData();
+
+    // Check if extra data was passed from GoRouter (recent AI result)
+    final extra = GoRouter.of(
+      context,
+    ).routerDelegate.currentConfiguration.extra;
+    if (extra != null && extra is Map<String, dynamic>) {
+      supabaseData = extra;
+      print('🟢 Loaded AI result from navigation extra: $supabaseData');
+      // Immediately set the AI generated image URL from the passed data
+      final filePath = extra['file_path'] as String?;
+      if (filePath != null) {
+        print('✅ Using AI-generated image URL from navigation: $filePath');
+        aiGeneratedImageUrl = filePath;
+      }
+      setState(() {
+        isLoading = false;
+        isDashboardLoading = false;
+      });
+    } else {
+      _loadAllData();
+    }
 
     // Listen for analysis completion
     _startListeningForAnalysisCompletion();
@@ -90,6 +113,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
       _loadRoboflowData(),
       _loadSupabaseData(),
       _loadAIResponse(),
+      _loadAIGeneratedImage(),
     ]);
   }
 
@@ -224,6 +248,38 @@ class _AIResultsPageState extends State<AIResultsPage> {
           isDashboardLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadAIGeneratedImage() async {
+    if (_isDisposed || !mounted) return;
+
+    try {
+      print('🔄 Loading AI generated image...');
+
+      // Get the upload ID from Supabase data if available
+      final uploadId = supabaseData?['id'];
+      if (uploadId != null) {
+        final imageUrl = await _aiResultsService.fetchLatestAIResultImage(
+          uploadId,
+        );
+
+        if (mounted && !_isDisposed) {
+          setState(() {
+            aiGeneratedImageUrl = imageUrl;
+          });
+        }
+
+        if (imageUrl != null) {
+          print('✅ Successfully loaded AI generated image URL');
+        } else {
+          print('⚠️ No AI generated image found for current upload');
+        }
+      } else {
+        print('⚠️ No upload ID available to fetch AI generated image');
+      }
+    } catch (e) {
+      print('❌ Error loading AI generated image: $e');
     }
   }
 
@@ -544,6 +600,8 @@ class _AIResultsPageState extends State<AIResultsPage> {
             onRetry: _handleRetry,
             aiResponse: aiResponse, // Pass AI response directly
             isAILoading: aiResponse == null && errorMessage == null,
+            aiGeneratedImageUrl:
+                aiGeneratedImageUrl, // Pass the AI-generated image URL
           ),
           const SizedBox(height: 24),
 

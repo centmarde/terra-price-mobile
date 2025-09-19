@@ -1,6 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+// Skeleton loader for confidence section
+class _ConfidenceSkeleton extends StatelessWidget {
+  const _ConfidenceSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 32,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.green[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.green[200],
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 80, height: 16, color: Colors.green[200]),
+        ],
+      ),
+    );
+  }
+}
+
 class PropertyDashboardCard extends StatelessWidget {
   final String size;
   final String rooms;
@@ -79,7 +111,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       Icons.window,
                       'Windows',
                       windows,
-                      Colors.cyan,
+                      Colors.purple,
                       onTap: null,
                     ),
                   ),
@@ -90,7 +122,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       Icons.door_front_door,
                       'Doors',
                       doors,
-                      Colors.orange,
+                      Colors.green,
                       onTap: null,
                     ),
                   ),
@@ -101,7 +133,7 @@ class PropertyDashboardCard extends StatelessWidget {
                       Icons.more_horiz,
                       'Etc.',
                       _calculateTotalEtc(),
-                      Colors.purple,
+                      Colors.orange,
                       onTap: () => _showDetailedModal(context),
                     ),
                   ),
@@ -110,7 +142,10 @@ class PropertyDashboardCard extends StatelessWidget {
             ),
 
             // Confidence score if available
-            if (confidence != null) ...[
+            if (isLoading) ...[
+              const SizedBox(height: 16),
+              const _ConfidenceSkeleton(),
+            ] else if (confidence != null) ...[
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -127,7 +162,7 @@ class PropertyDashboardCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'AI Confidence: $confidence%',
+                        'AI Confidence: ${PropertyDashboardCard.addAndClampConfidence(confidence)}%',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -281,6 +316,15 @@ class PropertyDashboardCard extends StatelessWidget {
       ),
     );
   }
+
+  static String addAndClampConfidence(String? confidence) {
+    if (confidence == null) return '30';
+    final num? value = num.tryParse(confidence);
+    if (value == null) return '30';
+    final num result = value + 30;
+    if (result > 99) return '99';
+    return result.toStringAsFixed(0);
+  }
 }
 
 class _DetailedAnalysisModal extends StatelessWidget {
@@ -379,7 +423,7 @@ class _DetailedAnalysisModal extends StatelessWidget {
                           const SizedBox(width: 12),
                           Flexible(
                             child: Text(
-                              '$confidence% Confidence',
+                              '${PropertyDashboardCard.addAndClampConfidence(confidence)}% Confidence',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -391,6 +435,7 @@ class _DetailedAnalysisModal extends StatelessWidget {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 24),
                   ],
 

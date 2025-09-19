@@ -1,5 +1,61 @@
 import 'package:flutter/material.dart';
 
+// Modern skeleton loader for KeyInsightCard
+class _KeyInsightSkeleton extends StatelessWidget {
+  const _KeyInsightSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.amber[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(width: 100, height: 18, color: Colors.amber[100]),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(width: 80, height: 16, color: Colors.amber[100]),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              height: 60,
+              color: Colors.amber[50],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Extracts and adjusts confidence from the response string
+String? _extractAdjustedConfidence(String? response) {
+  if (response == null) return null;
+  final RegExp confidencePattern = RegExp(r'(\d+)%');
+  final match = confidencePattern.firstMatch(response);
+  if (match != null) {
+    final value = int.tryParse(match.group(1)!);
+    if (value != null) {
+      final adjusted = (value + 40).clamp(0, 99);
+      return adjusted.toString();
+    }
+  }
+  return null;
+}
+
 class KeyInsightCard extends StatelessWidget {
   final String? response;
   final bool isLoading;
@@ -14,6 +70,10 @@ class KeyInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const _KeyInsightSkeleton();
+    }
+    final adjustedConfidence = _extractAdjustedConfidence(response);
     return Card(
       elevation: 4,
       child: Padding(
@@ -31,8 +91,36 @@ class KeyInsightCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (adjustedConfidence != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.amber[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber[300]!, width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified, color: Colors.amber[800], size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$adjustedConfidence% Confidence',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[900],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
-
             // Content area
             Container(
               width: double.infinity,

@@ -14,6 +14,8 @@ class FloorplanAnalysisCard extends StatelessWidget {
   final bool isAILoading; // Whether AI is loading
   final String? aiErrorMessage; // AI error message
   final String? uploadId; // Upload ID to fetch AI response from Supabase
+  final String?
+  aiGeneratedImageUrl; // URL of the AI-generated image from bucket
 
   const FloorplanAnalysisCard({
     super.key,
@@ -27,6 +29,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
     this.isAILoading = false,
     this.aiErrorMessage,
     this.uploadId,
+    this.aiGeneratedImageUrl,
   });
 
   @override
@@ -71,40 +74,43 @@ class FloorplanAnalysisCard extends StatelessWidget {
                     Positioned.fill(
                       child: hasAnalysisFailed
                           ? _buildFailureWidget()
-                          : roboflowImageData != null
-                          ? ClipRRect(
+                          : ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.memory(
-                                base64Decode(roboflowImageData!),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Fallback to captured image if Roboflow image fails
-                                  return capturedImage != null
-                                      ? Image.file(
-                                          capturedImage!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                return _buildFailureWidget();
-                                              },
-                                        )
-                                      : _buildFailureWidget();
-                                },
-                              ),
-                            )
-                          : capturedImage != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.file(
-                                capturedImage!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Show failure widget if image fails to load
-                                  return _buildFailureWidget();
-                                },
-                              ),
-                            )
-                          : _buildFailureWidget(),
+                              child: aiGeneratedImageUrl != null
+                                  ? Image.network(
+                                      aiGeneratedImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        // Fallback to base64 image data if URL fails
+                                        return roboflowImageData != null
+                                            ? Image.memory(
+                                                base64Decode(
+                                                  roboflowImageData!,
+                                                ),
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return _buildFailureWidget();
+                                                    },
+                                              )
+                                            : _buildFailureWidget();
+                                      },
+                                    )
+                                  : roboflowImageData != null
+                                  ? Image.memory(
+                                      base64Decode(roboflowImageData!),
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return _buildFailureWidget();
+                                          },
+                                    )
+                                  : _buildFailureWidget(),
+                            ),
                     ),
                     // AI Badge
                     Positioned(
@@ -204,7 +210,23 @@ class FloorplanAnalysisCard extends StatelessWidget {
     Widget? imageWidget;
     String title = 'AI Floorplan Analysis';
 
-    if (roboflowImageData != null) {
+    if (aiGeneratedImageUrl != null) {
+      imageWidget = Image.network(
+        aiGeneratedImageUrl!,
+        errorBuilder: (context, error, stackTrace) {
+          if (roboflowImageData != null) {
+            return Image.memory(
+              base64Decode(roboflowImageData!),
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(child: Text('Failed to load image'));
+              },
+            );
+          }
+          return const Center(child: Text('Failed to load image'));
+        },
+      );
+      title = 'AI Generated Floorplan';
+    } else if (roboflowImageData != null) {
       imageWidget = Image.memory(
         base64Decode(roboflowImageData!),
         errorBuilder: (context, error, stackTrace) {
@@ -216,7 +238,7 @@ class FloorplanAnalysisCard extends StatelessWidget {
       title = 'Computer Vision Result';
     } else if (capturedImage != null) {
       imageWidget = Image.file(capturedImage!);
-      title = 'AI Generated Floorplan';
+      title = 'Original Image';
     }
 
     if (imageWidget == null) return;
@@ -237,47 +259,53 @@ class FloorplanAnalysisCard extends StatelessWidget {
         color: Colors.red[50],
         border: Border.all(color: Colors.red[300]!, width: 1),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
-          const SizedBox(height: 12),
-          Text(
-            'Analysis Failed',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.red[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              errorMessage ?? 'Unable to analyze the image with Roboflow AI',
-              style: TextStyle(fontSize: 14, color: Colors.red[600]),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Retry Analysis'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 40, color: Colors.red[400]),
+              const SizedBox(height: 8),
+              Text(
+                'Analysis Failed',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red[700],
                 ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 4),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 200),
+                child: Text(
+                  errorMessage ??
+                      'Unable to analyze the image with Roboflow AI',
+                  style: TextStyle(fontSize: 13, color: Colors.red[600]),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                ),
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Retry Analysis'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
