@@ -91,20 +91,91 @@ class SupabaseDataService {
 
       developer.log('🔍 Fetching latest analysis data for user: $userId');
 
+      // First, let's debug by getting all records to see what's available
+      final allRecords = await _supabase
+          .from('mobile_uploads')
+          .select('id, file_name, analyzed_at, created_at, status')
+          .eq('user_id', userId)
+          .order('analyzed_at', ascending: false);
+
+      developer.log(
+        '🔍 DEBUG: Found ${allRecords.length} total records for user',
+      );
+      for (int i = 0; i < allRecords.length && i < 3; i++) {
+        final record = allRecords[i];
+        developer.log(
+          '🔍 Record $i: id=${record['id']}, name=${record['file_name']}, analyzed_at=${record['analyzed_at']}, status=${record['status']}',
+        );
+      }
+
+      // Now get the latest completed record (processed or approved)
       final response = await _supabase
           .from('mobile_uploads')
           .select('*')
           .eq('user_id', userId)
-          .eq('status', 'processed')
+          .inFilter('status', ['processed', 'approved'])
           .order('analyzed_at', ascending: false)
+          .order('created_at', ascending: false) // Fallback sort
           .limit(1);
 
       if (response.isEmpty) {
-        developer.log('⚠️ No analysis data found for user');
+        developer.log(
+          '⚠️ No completed analysis data found for user (processed/approved)',
+        );
+
+        // Try getting the latest record regardless of status
+        final anyStatusResponse = await _supabase
+            .from('mobile_uploads')
+            .select('*')
+            .eq('user_id', userId)
+            .order('analyzed_at', ascending: false)
+            .order('created_at', ascending: false)
+            .limit(1);
+
+        if (anyStatusResponse.isNotEmpty) {
+          final latestRecord = anyStatusResponse.first;
+          developer.log(
+            '🔍 Found latest record with status: ${latestRecord['status']}',
+          );
+          developer.log(
+            '🔍 Latest record details: id=${latestRecord['id']}, name=${latestRecord['file_name']}',
+          );
+
+          // Return this record even if it's not processed/approved
+          // Convert numeric values to ensure proper types
+          final processedData = <String, dynamic>{
+            ...latestRecord,
+            'doors': _safeToInt(latestRecord['doors']),
+            'rooms': _safeToInt(latestRecord['rooms']),
+            'window': _safeToInt(latestRecord['window']),
+            'sofa': _safeToInt(latestRecord['sofa']),
+            'large_sofa': _safeToInt(latestRecord['large_sofa']),
+            'sink': _safeToInt(latestRecord['sink']),
+            'large_sink': _safeToInt(latestRecord['large_sink']),
+            'twin_sink': _safeToInt(latestRecord['twin_sink']),
+            'tub': _safeToInt(latestRecord['tub']),
+            'coffee_table': _safeToInt(latestRecord['coffee_table']),
+            'total_detections': _safeToInt(latestRecord['total_detections']),
+            'confidence_score': _safeToInt(latestRecord['confidence_score']),
+            'file_size': _safeToInt(latestRecord['file_size']),
+          };
+
+          developer.log(
+            '✅ Using latest record regardless of status: ${processedData['file_name']}',
+          );
+          return processedData;
+        } else {
+          developer.log('⚠️ No records found at all for user');
+        }
+
         return null;
       }
 
-      final latestData = response.first as Map<String, dynamic>;
+      final latestData = response.first;
+
+      developer.log(
+        '✅ Found latest processed record: id=${latestData['id']}, name=${latestData['file_name']}, analyzed_at=${latestData['analyzed_at']}',
+      );
 
       // Convert numeric values to ensure proper types
       final processedData = <String, dynamic>{
@@ -160,14 +231,16 @@ class SupabaseDataService {
           .from('mobile_uploads')
           .select('*')
           .eq('user_id', userId)
-          .eq('status', 'processed')
+          .inFilter('status', ['processed', 'approved'])
           .order('analyzed_at', ascending: false);
 
-      developer.log('✅ Found ${response.length} analysis records');
+      developer.log(
+        '✅ Found ${response.length} analysis records (processed/approved)',
+      );
 
       // Process each record to ensure proper types
       final processedData = response.map<Map<String, dynamic>>((record) {
-        final data = record as Map<String, dynamic>;
+        final data = record;
         return {
           ...data,
           'doors': _safeToInt(data['doors']),
@@ -224,7 +297,7 @@ class SupabaseDataService {
             'doors, rooms, window, sofa, large_sofa, sink, large_sink, twin_sink, tub, coffee_table, total_detections, confidence_score',
           )
           .eq('user_id', userId)
-          .eq('status', 'processed');
+          .inFilter('status', ['processed', 'approved']);
 
       if (response.isEmpty) {
         return {
@@ -241,7 +314,7 @@ class SupabaseDataService {
       Map<String, int> objectCounts = {};
 
       for (var record in response) {
-        final data = record as Map<String, dynamic>;
+        final data = record;
         totalDetections += _safeToInt(data['total_detections']);
         totalConfidence += _safeToDouble(data['confidence_score']);
 
@@ -295,6 +368,26 @@ class SupabaseDataService {
         'averageConfidence': 0.0,
         'mostCommonObject': 'None',
       };
+    }
+  }
+
+  /// Fetches AI analysis data for a specific file name
+  Future<Map<String, dynamic>?> getAnalysisDataByFileName(
+    String fileName,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('ai_analysis_results')
+          .select()
+          .eq('file_name', fileName)
+          .order('analyzed_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      print('Error fetching analysis data by file name: $e');
+      return null;
     }
   }
 }

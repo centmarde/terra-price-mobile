@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../providers/home_provider.dart';
+import '../providers/history_provider.dart'; // Add this import
 import '../widgets/baseWidgets/home_page.dart';
 import '../../profile/views/profile_page.dart';
 import '../../settings/views/settings_page.dart';
@@ -14,8 +15,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ProfileProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ProfileProvider()),
+        ChangeNotifierProvider(create: (context) => HistoryProvider()),
+      ],
       child: Consumer<HomeProvider>(
         builder: (context, homeProvider, child) {
           return Scaffold(
