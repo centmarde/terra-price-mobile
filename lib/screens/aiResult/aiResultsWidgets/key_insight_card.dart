@@ -145,24 +145,65 @@ class KeyInsightCard extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
+    // Debug print to check what we're receiving
+    print('🔍 KeyInsightCard _buildContent called');
+    print('📝 Response available: ${response != null}');
+    print('⏳ Is loading: $isLoading');
+    print('❌ Error message: $errorMessage');
+
+    if (response != null) {
+      print('📄 Response length: ${response!.length} characters');
+      print(
+        '📄 Response preview: ${response!.substring(0, response!.length > 100 ? 100 : response!.length)}...',
+      );
+    }
+
     // Check if we're in loading state
     if (isLoading) {
+      print('🔄 Showing loading widget');
       return _buildLoadingWidget();
     }
 
     // Check for error
     if (errorMessage != null) {
+      print('❌ Showing error widget: $errorMessage');
       return _buildErrorWidget();
     }
 
-    // Use the response directly
+    // Use the response directly - prioritize any available response
     final currentResponse = response ?? '';
 
-    if (currentResponse.isEmpty) {
-      return _buildEmptyWidget();
+    // Only show empty widget if truly no response and not loading
+    if (currentResponse.isEmpty && !isLoading) {
+      print('📭 No response available, showing empty widget');
+      return _buildNoInsightsWidget();
     }
 
+    print('✅ Showing formatted response');
     return _buildFormattedResponse(context, currentResponse);
+  }
+
+  Widget _buildNoInsightsWidget() {
+    return Column(
+      children: [
+        Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
+        const SizedBox(height: 12),
+        Text(
+          'No AI Insights Available',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'AI analysis completed but no detailed insights were generated for this image.',
+          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
   }
 
   Widget _buildLoadingWidget() {
@@ -171,7 +212,7 @@ class KeyInsightCard extends StatelessWidget {
         const CircularProgressIndicator(color: Colors.amber, strokeWidth: 3),
         const SizedBox(height: 16),
         Text(
-          'AI is analyzing your floorplan...',
+          'Loading AI insights...',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -181,7 +222,7 @@ class KeyInsightCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'This may take a few moments',
+          'Please wait while we retrieve the analysis',
           style: TextStyle(fontSize: 14, color: Colors.amber[700]),
           textAlign: TextAlign.center,
         ),
@@ -215,26 +256,8 @@ class KeyInsightCard extends StatelessWidget {
   }
 
   Widget _buildEmptyWidget() {
-    return Column(
-      children: [
-        Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
-        const SizedBox(height: 12),
-        Text(
-          'No Insights Available',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'AI insights will appear here after analysis',
-          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
+    // This method is now renamed and used only when there's truly no data
+    return _buildNoInsightsWidget();
   }
 
   Widget _buildFormattedResponse(BuildContext context, String response) {

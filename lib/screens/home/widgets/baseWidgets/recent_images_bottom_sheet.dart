@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import '../../../aiResult/services/supabase_data_service.dart';
 
@@ -100,9 +99,10 @@ class RecentImagesBottomSheet extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12.r),
                     onTap: () {
-                      // Navigate to AI result page using GoRouter and pass data
+                      // Navigate to AI result page using GoRouter - no extra data
+                      // This ensures the page always fetches the latest record
                       Navigator.pop(context); // Close the bottom sheet
-                      context.go('/ai_results_page', extra: data);
+                      context.go('/ai_results_page');
                     },
                     child: Container(
                       padding: EdgeInsets.all(20.w),

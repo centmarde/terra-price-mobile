@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'action_card.dart';
-
 import '../../../aiResult/services/supabase_data_service.dart';
+import '../../providers/history_provider.dart';
+import '../history_bottom_sheet.dart';
 
 class UploadActionsGrid extends StatelessWidget {
   final VoidCallback onCameraPressed;
@@ -17,6 +19,18 @@ class UploadActionsGrid extends StatelessWidget {
     required this.onRecentImagesPressed,
     required this.onUploadFilesPressed,
   });
+
+  void _showHistoryBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ChangeNotifierProvider(
+        create: (context) => HistoryProvider(),
+        child: const HistoryBottomSheet(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +90,18 @@ class UploadActionsGrid extends StatelessWidget {
                 if (analyzedAt != null) {
                   dateTime = DateTime.tryParse(analyzedAt);
                 }
+
+                // Debug print to ensure AI response is in the data
+                print('📋 Recent AI Result data keys: ${data.keys.toList()}');
+                print(
+                  '🤖 AI response available: ${data['ai_response'] != null}',
+                );
+                if (data['ai_response'] != null) {
+                  final aiResponseLength =
+                      (data['ai_response'] as String).length;
+                  print('📝 AI response length: $aiResponseLength characters');
+                }
+
                 return ActionCard(
                   icon: Icons.insights_outlined,
                   title: 'Recent AI Result',
@@ -91,7 +117,7 @@ class UploadActionsGrid extends StatelessWidget {
               icon: Icons.schedule,
               title: 'History',
               subtitle: 'View your recent uploads and actions',
-              onTap: onRecentImagesPressed,
+              onTap: () => _showHistoryBottomSheet(context),
             ),
           ],
         ),
