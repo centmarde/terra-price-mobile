@@ -54,6 +54,10 @@ class _AIResultsPageState extends State<AIResultsPage> {
     if (extra != null && extra is Map<String, dynamic>) {
       supabaseData = extra;
       print('🟢 Loaded AI result from navigation extra: $supabaseData');
+
+      // Immediately load AI response from the passed data
+      _loadAIResponseFromNavigationData();
+
       // Immediately set the AI generated image URL from the passed data
       final filePath = extra['file_path'] as String?;
       if (filePath != null) {
@@ -289,7 +293,35 @@ class _AIResultsPageState extends State<AIResultsPage> {
     try {
       print('🔄 Loading AI response...');
 
-      // Get all analysis data - this includes AI responses
+      // First check if we already have AI response in the passed supabaseData
+      if (supabaseData != null && supabaseData!['ai_response'] != null) {
+        final response = supabaseData!['ai_response'] as String?;
+
+        if (response != null && response.isNotEmpty) {
+          // Extract cost and confidence from the AI response
+          final cost = AIResponseParser.extractTotalCost(response);
+          final confidence = AIResponseParser.extractConfidence(response);
+
+          if (mounted && !_isDisposed) {
+            setState(() {
+              aiResponse = response;
+              extractedCost = cost;
+              extractedConfidence = confidence;
+            });
+          }
+
+          print('✅ Using AI response from navigation data');
+          print(
+            '📝 Full AI response: ${response.substring(0, response.length > 200 ? 200 : response.length)}...',
+          );
+          print('💰 Extracted cost: $cost');
+          print('📊 Extracted confidence: $confidence');
+          return;
+        }
+      }
+
+      // Fallback to fetching from database if no AI response in passed data
+      print('🔄 Fetching AI response from database...');
       final allAnalysisData = await _supabaseService.getAllAnalysisData();
 
       if (allAnalysisData.isNotEmpty) {
@@ -310,17 +342,65 @@ class _AIResultsPageState extends State<AIResultsPage> {
             });
           }
 
-          print('✅ Loaded and parsed AI response successfully');
+          print('✅ Loaded and parsed AI response from database');
+          print(
+            '📝 Full AI response: ${response.substring(0, response.length > 200 ? 200 : response.length)}...',
+          );
           print('💰 Extracted cost: $cost');
           print('📊 Extracted confidence: $confidence');
         } else {
           print('⚠️ No AI response found in latest analysis data');
+          if (mounted && !_isDisposed) {
+            setState(() {
+              aiResponse = null;
+              extractedCost = null;
+              extractedConfidence = null;
+            });
+          }
         }
       } else {
         print('⚠️ No analysis data found for AI response');
+        if (mounted && !_isDisposed) {
+          setState(() {
+            aiResponse = null;
+            extractedCost = null;
+            extractedConfidence = null;
+          });
+        }
       }
     } catch (e) {
       print('❌ Error loading AI response: $e');
+      if (mounted && !_isDisposed) {
+        setState(() {
+          aiResponse = null;
+          extractedCost = null;
+          extractedConfidence = null;
+        });
+      }
+    }
+  }
+
+  /// Load AI response immediately from navigation data
+  void _loadAIResponseFromNavigationData() {
+    if (supabaseData != null && supabaseData!['ai_response'] != null) {
+      final response = supabaseData!['ai_response'] as String?;
+
+      if (response != null && response.isNotEmpty) {
+        // Extract cost and confidence from the AI response
+        final cost = AIResponseParser.extractTotalCost(response);
+        final confidence = AIResponseParser.extractConfidence(response);
+
+        setState(() {
+          aiResponse = response;
+          extractedCost = cost;
+          extractedConfidence = confidence;
+        });
+
+        print('✅ Immediately loaded AI response from navigation data');
+        print('📝 AI response length: ${response.length} characters');
+        print('💰 Extracted cost: $cost');
+        print('📊 Extracted confidence: $confidence');
+      }
     }
   }
 
@@ -598,10 +678,11 @@ class _AIResultsPageState extends State<AIResultsPage> {
             hasAnalysisFailed: homeProvider.roboflowAnalysisFailed,
             errorMessage: homeProvider.roboflowErrorMessage,
             onRetry: _handleRetry,
-            aiResponse: aiResponse, // Pass AI response directly
-            isAILoading: aiResponse == null && errorMessage == null,
-            aiGeneratedImageUrl:
-                aiGeneratedImageUrl, // Pass the AI-generated image URL
+            aiResponse:
+                aiResponse, // This now contains the full AI response immediately
+            isAILoading:
+                aiResponse == null && supabaseData?['ai_response'] == null,
+            aiGeneratedImageUrl: aiGeneratedImageUrl,
           ),
           const SizedBox(height: 24),
 

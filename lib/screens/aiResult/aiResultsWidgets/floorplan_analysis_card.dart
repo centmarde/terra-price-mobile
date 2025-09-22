@@ -190,9 +190,9 @@ class FloorplanAnalysisCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Analysis insights
+            // Analysis insights - pass the full AI response
             KeyInsightCard(
-              response: aiResponse,
+              response: aiResponse, // Full AI response with all details
               isLoading: isAILoading,
               errorMessage: aiErrorMessage,
             ),

@@ -90,6 +90,18 @@ class UploadActionsGrid extends StatelessWidget {
                 if (analyzedAt != null) {
                   dateTime = DateTime.tryParse(analyzedAt);
                 }
+
+                // Debug print to ensure AI response is in the data
+                print('📋 Recent AI Result data keys: ${data.keys.toList()}');
+                print(
+                  '🤖 AI response available: ${data['ai_response'] != null}',
+                );
+                if (data['ai_response'] != null) {
+                  final aiResponseLength =
+                      (data['ai_response'] as String).length;
+                  print('📝 AI response length: $aiResponseLength characters');
+                }
+
                 return ActionCard(
                   icon: Icons.insights_outlined,
                   title: 'Recent AI Result',
