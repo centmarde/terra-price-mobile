@@ -173,6 +173,8 @@ class ImageUploadService {
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
         'analyzed_at': DateTime.now().toIso8601String(),
+        'is_read':
+            false, // New records are automatically unread for notifications
         // Add object counts
         'doors': objectCounts['doors'],
         'rooms': objectCounts['rooms'],
