@@ -30,16 +30,24 @@ class _HomeAppBarState extends State<HomeAppBar> {
   }
 
   void _setupRealtimeListener() {
-    // Listen to real-time changes in mobile_uploads table
+    // Listen to real-time changes in mobile_uploads table for current user only
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
     _notificationStream = Supabase.instance.client
         .from('mobile_uploads')
-        .stream(primaryKey: ['id'])
-        .eq('is_read', false);
+        .stream(primaryKey: ['id']);
 
     _notificationStream.listen((data) {
       if (mounted) {
+        // Filter data for current user and unread notifications only
+        final unreadUserNotifications = data.where((record) {
+          return record['user_id'] == currentUserId &&
+              (record['is_read'] == false || record['is_read'] == null);
+        }).toList();
+
         setState(() {
-          _unreadCount = data.length;
+          _unreadCount = unreadUserNotifications.length;
         });
       }
     });
@@ -48,14 +56,25 @@ class _HomeAppBarState extends State<HomeAppBar> {
   Future<void> _fetchUnreadCount() async {
     try {
       final supabase = Supabase.instance.client;
+      final currentUserId = supabase.auth.currentUser?.id;
+
+      if (currentUserId == null) {
+        if (mounted) {
+          setState(() {
+            _unreadCount = 0;
+          });
+        }
+        return;
+      }
+
       final response = await supabase
           .from('mobile_uploads')
-          .select('id')
-          .eq('is_read', false)
-          .count();
+          .count(CountOption.exact)
+          .eq('user_id', currentUserId)
+          .eq('is_read', false);
       if (mounted) {
         setState(() {
-          _unreadCount = response.count;
+          _unreadCount = response;
         });
       }
     } catch (e) {
@@ -168,10 +187,23 @@ class _NotificationModalState extends State<NotificationModal> {
 
   Future<List<Map<String, dynamic>>> _fetchNotifications() async {
     final supabase = Supabase.instance.client;
+    final currentUserId = supabase.auth.currentUser?.id;
+
+    if (currentUserId == null) {
+      return [];
+    }
+
     final response = await supabase
         .from('mobile_uploads')
-        .select('id, file_name, status, analyzed_at, is_read')
-        .order('analyzed_at', ascending: false)
+        .select(
+          'id, file_name, status, analyzed_at, is_read, created_at, updated_at',
+        )
+        .eq('user_id', currentUserId)
+        .order('updated_at', ascending: false, nullsFirst: false)
+        .order(
+          'created_at',
+          ascending: false,
+        ) // Fallback for records without updated_at
         .limit(30);
     return List<Map<String, dynamic>>.from(response);
   }
@@ -179,10 +211,10 @@ class _NotificationModalState extends State<NotificationModal> {
   String _formatNotification(Map<String, dynamic> record) {
     final fileName = record['file_name'] ?? '';
     final status = record['status'] ?? '';
-    final analyzedAt = record['analyzed_at'];
+    final updatedAt = record['updated_at'];
     String formattedDate = '';
-    if (analyzedAt != null) {
-      final date = DateTime.tryParse(analyzedAt.toString());
+    if (updatedAt != null) {
+      final date = DateTime.tryParse(updatedAt.toString());
       if (date != null) {
         formattedDate = DateFormat('MMM. d, yyyy  h:mm a').format(date);
       }
