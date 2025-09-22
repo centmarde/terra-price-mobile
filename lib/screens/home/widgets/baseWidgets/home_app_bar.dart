@@ -104,42 +104,45 @@ class _HomeAppBarState extends State<HomeAppBar> {
       backgroundColor: Colors.green,
       foregroundColor: Theme.of(context).colorScheme.onSurface,
       actions: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              onPressed: _openNotificationsModal,
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              color: Colors.white,
-              splashColor: Colors.white,
-              highlightColor: Colors.white,
-            ),
-            if (_unreadCount > 0)
-              Positioned(
-                right: 2,
-                top: 6,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFFF2D55), // Messenger/FB red
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2.5),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _unreadCount > 9 ? '9+' : '$_unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      height: 1.1,
-                      letterSpacing: 0.2,
+        Padding(
+          padding: EdgeInsets.only(right: 16.w),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                onPressed: _openNotificationsModal,
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                color: Colors.white,
+                splashColor: Colors.white,
+                highlightColor: Colors.white,
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 2,
+                  top: 6,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFFF2D55), // Messenger/FB red
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _unreadCount > 9 ? '9+' : '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -243,48 +246,53 @@ class _NotificationModalState extends State<NotificationModal> {
                 if (notifications.isEmpty) {
                   return Center(child: Text('No notifications found'));
                 }
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: notifications.length,
-                  separatorBuilder: (context, index) =>
-                      Divider(height: 1, color: Colors.grey[300]),
-                  itemBuilder: (context, index) {
-                    final record = notifications[index];
-                    final isUnread =
-                        record['is_read'] == false || record['is_read'] == null;
-                    return InkWell(
-                      onTap: isUnread
-                          ? () => _markAsRead(record['id'] as int)
-                          : null,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10.h),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.notifications,
-                              color: isUnread ? Colors.red : Colors.green,
-                              size: 28,
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              child: Text(
-                                _formatNotification(record),
-                                style: TextStyle(
-                                  fontSize: 15.sp,
-                                  fontWeight: isUnread
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isUnread ? Colors.red : null,
+                return Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: notifications.length,
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: Colors.grey[300]),
+                    itemBuilder: (context, index) {
+                      final record = notifications[index];
+                      final isUnread =
+                          record['is_read'] == false ||
+                          record['is_read'] == null;
+                      return InkWell(
+                        onTap: isUnread
+                            ? () => _markAsRead(record['id'] as int)
+                            : null,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.notifications,
+                                color: isUnread ? Colors.red : Colors.green,
+                                size: 28,
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Text(
+                                  _formatNotification(record),
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: isUnread
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isUnread ? Colors.red : null,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
             ),
