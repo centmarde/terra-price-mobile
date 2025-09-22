@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'action_card.dart';
-
 import '../../../aiResult/services/supabase_data_service.dart';
+import '../../providers/history_provider.dart';
+import '../history_bottom_sheet.dart';
 
 class UploadActionsGrid extends StatelessWidget {
   final VoidCallback onCameraPressed;
@@ -17,6 +19,18 @@ class UploadActionsGrid extends StatelessWidget {
     required this.onRecentImagesPressed,
     required this.onUploadFilesPressed,
   });
+
+  void _showHistoryBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ChangeNotifierProvider(
+        create: (context) => HistoryProvider(),
+        child: const HistoryBottomSheet(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +105,7 @@ class UploadActionsGrid extends StatelessWidget {
               icon: Icons.schedule,
               title: 'History',
               subtitle: 'View your recent uploads and actions',
-              onTap: onRecentImagesPressed,
+              onTap: () => _showHistoryBottomSheet(context),
             ),
           ],
         ),
