@@ -21,7 +21,8 @@ class AIResultsPage extends StatefulWidget {
   State<AIResultsPage> createState() => _AIResultsPageState();
 }
 
-class _AIResultsPageState extends State<AIResultsPage> {
+class _AIResultsPageState extends State<AIResultsPage>
+    with WidgetsBindingObserver {
   Map<String, dynamic>? roboflowData;
   Map<String, dynamic>? supabaseData;
   bool isLoading = true;
@@ -44,40 +45,31 @@ class _AIResultsPageState extends State<AIResultsPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     homeProvider = Provider.of<HomeProvider>(context, listen: false);
-    print('🚀 AIResultsPage initialized');
+    print(
+      '🚀 AIResultsPage initialized - Always fetching latest data from mobile_uploads',
+    );
 
-    // Check if extra data was passed from GoRouter (recent AI result)
-    final extra = GoRouter.of(
-      context,
-    ).routerDelegate.currentConfiguration.extra;
-    if (extra != null && extra is Map<String, dynamic>) {
-      supabaseData = extra;
-      print('🟢 Loaded AI result from navigation extra: $supabaseData');
-
-      // Immediately load AI response from the passed data
-      _loadAIResponseFromNavigationData();
-
-      // Immediately set the AI generated image URL from the passed data
-      final filePath = extra['file_path'] as String?;
-      if (filePath != null) {
-        print('✅ Using AI-generated image URL from navigation: $filePath');
-        aiGeneratedImageUrl = filePath;
-      }
-      setState(() {
-        isLoading = false;
-        isDashboardLoading = false;
-      });
-    } else {
-      _loadAllData();
-    }
+    // Always fetch the latest data from Supabase, never use navigation extras
+    _loadAllData();
 
     // Listen for analysis completion
     _startListeningForAnalysisCompletion();
   }
 
+  /// Called when the widget becomes visible again (e.g., from navigation)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print('📱 App resumed - refreshing AI results data');
+      _forceRefreshData();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _isDisposed = true;
     _analysisStatusTimer?.cancel();
     super.dispose();
@@ -113,6 +105,10 @@ class _AIResultsPageState extends State<AIResultsPage> {
   Future<void> _loadAllData() async {
     if (_isDisposed || !mounted) return;
 
+    print(
+      '🔄 _loadAllData: Fetching ALL latest data from mobile_uploads table',
+    );
+
     await Future.wait([
       _loadRoboflowData(),
       _loadSupabaseData(),
@@ -121,11 +117,48 @@ class _AIResultsPageState extends State<AIResultsPage> {
     ]);
   }
 
+  /// Force refresh all data - called when refresh button is tapped
+  Future<void> _forceRefreshData() async {
+    print(
+      '🔄 Force refresh: Clearing cached data and fetching fresh from database',
+    );
+
+    // Clear all cached data first
+    if (mounted && !_isDisposed) {
+      setState(() {
+        supabaseData = null;
+        roboflowData = null;
+        aiResponse = null;
+        extractedCost = null;
+        extractedConfidence = null;
+        aiGeneratedImageUrl = null;
+        isLoading = true;
+        isDashboardLoading = true;
+      });
+    }
+
+    // Force fresh fetch from database
+    await _loadAllData();
+  }
+
   Future<void> _loadRoboflowData() async {
     if (_isDisposed || !mounted) return;
 
     try {
       print('🔄 Loading Roboflow data in AI Results page...');
+
+      // Check if we have fresh Supabase data first (from recent AI result navigation)
+      if (supabaseData != null) {
+        print('✅ Using Supabase data instead of live Roboflow data');
+        if (mounted && !_isDisposed) {
+          setState(() {
+            roboflowData = null; // We'll use supabase data for display
+            isLoading = false;
+            errorMessage = null;
+          });
+        }
+        return;
+      }
 
       // Get data from HomeProvider (if user just took a photo)
       final providerData = homeProvider.latestRoboflowResult;
@@ -195,15 +228,16 @@ class _AIResultsPageState extends State<AIResultsPage> {
       }
 
       print(
-        '⚠️ No live data available from HomeProvider and no analysis failure or in progress',
+        '⚠️ No live Roboflow data from HomeProvider - checking if we have Supabase data...',
       );
 
-      // No data available and no failure - this shouldn't happen in normal flow
+      // If no live data but we have or will have supabase data, don't show error
+      // The _loadSupabaseData method will handle showing the data
       if (mounted && !_isDisposed) {
         setState(() {
           roboflowData = null;
           isLoading = false;
-          errorMessage = 'No analysis data available';
+          errorMessage = null; // Don't show error if we have supabase data
         });
       }
     } catch (e) {
@@ -221,7 +255,9 @@ class _AIResultsPageState extends State<AIResultsPage> {
     if (_isDisposed || !mounted) return;
 
     try {
-      print('🔄 Loading Supabase data...');
+      print(
+        '🔄 Loading Supabase data - ALWAYS fetching latest from mobile_uploads...',
+      );
       if (mounted && !_isDisposed) {
         setState(() {
           isDashboardLoading = true;
@@ -238,12 +274,18 @@ class _AIResultsPageState extends State<AIResultsPage> {
       }
 
       if (data != null) {
-        print('✅ Loaded Supabase data successfully');
+        print('✅ Loaded latest Supabase data successfully');
+        print('📋 Record ID: ${data['id']}');
+        print('📋 File name: ${data['file_name']}');
+        print('� Analyzed at: ${data['analyzed_at']}');
+        print('📋 Status: ${data['status']}');
         print(
-          '📊 Dashboard data: doors=${data['doors']}, rooms=${data['rooms']}, windows=${data['window']}',
+          '�📊 Dashboard data: doors=${data['doors']}, rooms=${data['rooms']}, windows=${data['window']}',
         );
       } else {
-        print('⚠️ No Supabase data found - possibly authentication issue');
+        print(
+          '⚠️ No Supabase data found - possibly authentication issue or no processed records',
+        );
       }
     } catch (e) {
       print('❌ Error loading Supabase data: $e');
@@ -261,26 +303,19 @@ class _AIResultsPageState extends State<AIResultsPage> {
     try {
       print('🔄 Loading AI generated image...');
 
-      // Get the upload ID from Supabase data if available
-      final uploadId = supabaseData?['id'];
-      if (uploadId != null) {
-        final imageUrl = await _aiResultsService.fetchLatestAIResultImage(
-          uploadId,
-        );
+      // Always fetch the latest AI-generated image for the current user
+      final imageUrl = await _aiResultsService.fetchLatestAIResultImage();
 
-        if (mounted && !_isDisposed) {
-          setState(() {
-            aiGeneratedImageUrl = imageUrl;
-          });
-        }
+      if (mounted && !_isDisposed) {
+        setState(() {
+          aiGeneratedImageUrl = imageUrl;
+        });
+      }
 
-        if (imageUrl != null) {
-          print('✅ Successfully loaded AI generated image URL');
-        } else {
-          print('⚠️ No AI generated image found for current upload');
-        }
+      if (imageUrl != null) {
+        print('✅ Successfully loaded latest AI generated image URL');
       } else {
-        print('⚠️ No upload ID available to fetch AI generated image');
+        print('⚠️ No AI generated image found for current user');
       }
     } catch (e) {
       print('❌ Error loading AI generated image: $e');
@@ -291,37 +326,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
     if (_isDisposed || !mounted) return;
 
     try {
-      print('🔄 Loading AI response...');
-
-      // First check if we already have AI response in the passed supabaseData
-      if (supabaseData != null && supabaseData!['ai_response'] != null) {
-        final response = supabaseData!['ai_response'] as String?;
-
-        if (response != null && response.isNotEmpty) {
-          // Extract cost and confidence from the AI response
-          final cost = AIResponseParser.extractTotalCost(response);
-          final confidence = AIResponseParser.extractConfidence(response);
-
-          if (mounted && !_isDisposed) {
-            setState(() {
-              aiResponse = response;
-              extractedCost = cost;
-              extractedConfidence = confidence;
-            });
-          }
-
-          print('✅ Using AI response from navigation data');
-          print(
-            '📝 Full AI response: ${response.substring(0, response.length > 200 ? 200 : response.length)}...',
-          );
-          print('💰 Extracted cost: $cost');
-          print('📊 Extracted confidence: $confidence');
-          return;
-        }
-      }
-
-      // Fallback to fetching from database if no AI response in passed data
-      print('🔄 Fetching AI response from database...');
+      print('🔄 Loading AI response from database...');
       final allAnalysisData = await _supabaseService.getAllAnalysisData();
 
       if (allAnalysisData.isNotEmpty) {
@@ -376,30 +381,6 @@ class _AIResultsPageState extends State<AIResultsPage> {
           extractedCost = null;
           extractedConfidence = null;
         });
-      }
-    }
-  }
-
-  /// Load AI response immediately from navigation data
-  void _loadAIResponseFromNavigationData() {
-    if (supabaseData != null && supabaseData!['ai_response'] != null) {
-      final response = supabaseData!['ai_response'] as String?;
-
-      if (response != null && response.isNotEmpty) {
-        // Extract cost and confidence from the AI response
-        final cost = AIResponseParser.extractTotalCost(response);
-        final confidence = AIResponseParser.extractConfidence(response);
-
-        setState(() {
-          aiResponse = response;
-          extractedCost = cost;
-          extractedConfidence = confidence;
-        });
-
-        print('✅ Immediately loaded AI response from navigation data');
-        print('📝 AI response length: ${response.length} characters');
-        print('💰 Extracted cost: $cost');
-        print('📊 Extracted confidence: $confidence');
       }
     }
   }
@@ -539,7 +520,8 @@ class _AIResultsPageState extends State<AIResultsPage> {
       );
     }
 
-    if (errorMessage != null) {
+    // Only show error if there's an error AND no Supabase data to display
+    if (errorMessage != null && supabaseData == null) {
       return Scaffold(
         appBar: AppBar(
           toolbarHeight: 80,
@@ -608,7 +590,7 @@ class _AIResultsPageState extends State<AIResultsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadAllData,
+            onPressed: _forceRefreshData,
             tooltip: 'Refresh Data',
           ),
         ],
