@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/history_provider.dart';
+import '../../aiResult/views/ai_results_page_wrapper.dart';
 
 /// Bottom sheet that displays upload history records
 class HistoryBottomSheet extends StatefulWidget {
@@ -19,6 +20,37 @@ class _HistoryBottomSheetState extends State<HistoryBottomSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HistoryProvider>().fetchUploadHistory();
     });
+  }
+
+  /// Navigate to AI result for a specific upload record
+  Future<void> _navigateToAIResult(
+    BuildContext context,
+    Map<String, dynamic> uploadData,
+  ) async {
+    try {
+      if (context.mounted) {
+        // Close the bottom sheet first
+        Navigator.pop(context);
+
+        // Navigate to AI results page using Navigator.push instead of GoRouter
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                AIResultsPageWrapper(analysisData: uploadData),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load AI result: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -140,6 +172,20 @@ class _HistoryBottomSheetState extends State<HistoryBottomSheet> {
                     final status = upload['status'] ?? 'Unknown';
                     final createdAt = upload['created_at'];
 
+                    // Show additional analysis info if available
+                    final rooms = upload['rooms'];
+                    final doors = upload['doors'];
+                    final windows = upload['window'];
+
+                    String analysisInfo = '';
+                    if (rooms != null || doors != null || windows != null) {
+                      final roomsStr = rooms?.toString() ?? '0';
+                      final doorsStr = doors?.toString() ?? '0';
+                      final windowsStr = windows?.toString() ?? '0';
+                      analysisInfo =
+                          '$roomsStr rooms • $doorsStr doors • $windowsStr windows';
+                    }
+
                     String formattedDate = 'Unknown date';
                     if (createdAt != null) {
                       try {
@@ -154,49 +200,81 @@ class _HistoryBottomSheetState extends State<HistoryBottomSheet> {
 
                     return Card(
                       elevation: 2,
-                      child: Padding(
-                        padding: EdgeInsets.all(16.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    fileName,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
+                      child: InkWell(
+                        onTap: () => _navigateToAIResult(context, upload),
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      fileName,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  _buildStatusChip(status, context),
+                                ],
+                              ),
+                              if (analysisInfo.isNotEmpty) ...[
+                                SizedBox(height: 6.h),
+                                Text(
+                                  analysisInfo,
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(width: 8.w),
-                                _buildStatusChip(status, context),
                               ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 14.sp,
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  formattedDate,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.access_time,
+                                        size: 14.sp,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.outline,
+                                      ),
+                                      SizedBox(width: 4.w),
+                                      Text(
+                                        formattedDate,
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outline,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 14.sp,
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.outline,
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );

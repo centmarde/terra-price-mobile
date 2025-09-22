@@ -297,4 +297,24 @@ class SupabaseDataService {
       };
     }
   }
+
+  /// Fetches AI analysis data for a specific file name
+  Future<Map<String, dynamic>?> getAnalysisDataByFileName(
+    String fileName,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('ai_analysis_results')
+          .select()
+          .eq('file_name', fileName)
+          .order('analyzed_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      print('Error fetching analysis data by file name: $e');
+      return null;
+    }
+  }
 }

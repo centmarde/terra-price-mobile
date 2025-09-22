@@ -4,12 +4,30 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class HistoryService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Fetches all mobile upload records for the current user
+  /// Fetches all mobile upload records with analysis data for the current user
   Future<List<Map<String, dynamic>>> getMobileUploads() async {
     try {
       final response = await _supabase
           .from('mobile_uploads')
-          .select('file_name, status, created_at')
+          .select('''
+            file_name, 
+            status, 
+            created_at,
+            doors,
+            rooms,
+            window,
+            sofa,
+            large_sofa,
+            coffee_table,
+            sink,
+            large_sink,
+            twin_sink,
+            tub,
+            confidence_score,
+            ai_response,
+            file_path,
+            analyzed_at
+          ''')
           .order('created_at', ascending: false);
 
       return List<Map<String, dynamic>>.from(response);
