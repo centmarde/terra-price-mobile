@@ -291,47 +291,44 @@ class KeyInsightCard extends StatelessWidget {
     final lines = text.split('\n');
 
     for (String line in lines) {
-      final trimmedLine = line.trim();
+      String trimmedLine = line.trim();
 
       if (trimmedLine.isEmpty) {
         widgets.add(const SizedBox(height: 8));
         continue;
       }
 
+      // Remove all asterisks for display
+      String cleanLine = trimmedLine.replaceAll('*', '');
+
       // Parse different formatting patterns
       if (trimmedLine.startsWith('##')) {
         // Main heading
         widgets.add(
-          _buildHeading(
-            trimmedLine.replaceFirst('##', '').trim(),
-            isMain: true,
-          ),
+          _buildHeading(cleanLine.replaceFirst('##', '').trim(), isMain: true),
         );
       } else if (trimmedLine.startsWith('#')) {
         // Sub heading
         widgets.add(
-          _buildHeading(
-            trimmedLine.replaceFirst('#', '').trim(),
-            isMain: false,
-          ),
+          _buildHeading(cleanLine.replaceFirst('#', '').trim(), isMain: false),
         );
       } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
         // Bold text
-        widgets.add(_buildBoldText(trimmedLine.replaceAll('**', '')));
+        widgets.add(_buildBoldText(cleanLine));
       } else if (trimmedLine.startsWith('*') && trimmedLine.endsWith('*')) {
         // Italic text
-        widgets.add(_buildItalicText(trimmedLine.replaceAll('*', '')));
+        widgets.add(_buildItalicText(cleanLine));
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
         // Bullet point
         widgets.add(
-          _buildBulletPoint(trimmedLine.replaceFirst(RegExp(r'^[•\-]\s*'), '')),
+          _buildBulletPoint(cleanLine.replaceFirst(RegExp(r'^[•\-]\s*'), '')),
         );
       } else if (trimmedLine.contains('**')) {
         // Mixed formatting within text
-        widgets.add(_buildMixedFormattedText(trimmedLine));
+        widgets.add(_buildMixedFormattedText(trimmedLine.replaceAll('*', '')));
       } else {
         // Regular text
-        widgets.add(_buildRegularText(trimmedLine));
+        widgets.add(_buildRegularText(cleanLine));
       }
 
       widgets.add(const SizedBox(height: 6));
