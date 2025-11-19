@@ -87,7 +87,11 @@ class KeyInsightCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 const Text(
                   'Results',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),
@@ -112,7 +116,7 @@ class KeyInsightCard extends StatelessWidget {
                       '$adjustedConfidence% Confidence',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber[900],
+                        color: Colors.black,
                         fontSize: 16,
                       ),
                     ),
@@ -127,11 +131,7 @@ class KeyInsightCard extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.amber, width: 2),
-                gradient: LinearGradient(
-                  colors: [Colors.amber[50]!, Colors.amber[100]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -275,7 +275,7 @@ class KeyInsightCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.amber[800],
+                color: Colors.black,
               ),
             ),
           ],
@@ -348,7 +348,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: isMain ? 18 : 16,
           fontWeight: FontWeight.bold,
-          color: Colors.amber[900],
+          color: Colors.black,
           height: 1.3,
         ),
       ),
@@ -363,7 +363,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.amber[800],
+          color: Colors.black,
           height: 1.4,
         ),
       ),
@@ -378,7 +378,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontStyle: FontStyle.italic,
-          color: Colors.amber[700],
+          color: Colors.black,
           height: 1.4,
         ),
       ),
@@ -404,11 +404,7 @@ class KeyInsightCard extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.amber[800],
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
             ),
           ),
         ],
@@ -427,11 +423,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
         break;
@@ -442,11 +434,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining.substring(0, boldStart),
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
       }
@@ -458,11 +446,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining.substring(boldStart),
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
         break;
@@ -475,7 +459,7 @@ class KeyInsightCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.amber[900],
+            color: Colors.black,
             height: 1.4,
           ),
         ),
@@ -495,7 +479,7 @@ class KeyInsightCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 14, color: Colors.amber[800], height: 1.4),
+        style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
         softWrap: true,
       ),
     );
