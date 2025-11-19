@@ -131,7 +131,7 @@ class PropertyDashboardCard extends StatelessWidget {
                     child: _dashboardTile(
                       context,
                       Icons.more_horiz,
-                      'Etc.',
+                      'More',
                       _calculateTotalEtc(),
                       Colors.orange,
                       onTap: () => _showDetailedModal(context),
