@@ -86,8 +86,12 @@ class KeyInsightCard extends StatelessWidget {
                 Icon(Icons.lightbulb, color: Colors.amber[700], size: 24),
                 const SizedBox(width: 8),
                 const Text(
-                  'AI Key Insights',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+                  'Results',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),
@@ -112,7 +116,7 @@ class KeyInsightCard extends StatelessWidget {
                       '$adjustedConfidence% Confidence',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber[900],
+                        color: Colors.black,
                         fontSize: 16,
                       ),
                     ),
@@ -127,11 +131,7 @@ class KeyInsightCard extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.amber, width: 2),
-                gradient: LinearGradient(
-                  colors: [Colors.amber[50]!, Colors.amber[100]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -275,7 +275,7 @@ class KeyInsightCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.amber[800],
+                color: Colors.black,
               ),
             ),
           ],
@@ -291,47 +291,44 @@ class KeyInsightCard extends StatelessWidget {
     final lines = text.split('\n');
 
     for (String line in lines) {
-      final trimmedLine = line.trim();
+      String trimmedLine = line.trim();
 
       if (trimmedLine.isEmpty) {
         widgets.add(const SizedBox(height: 8));
         continue;
       }
 
+      // Remove all asterisks for display
+      String cleanLine = trimmedLine.replaceAll('*', '');
+
       // Parse different formatting patterns
       if (trimmedLine.startsWith('##')) {
         // Main heading
         widgets.add(
-          _buildHeading(
-            trimmedLine.replaceFirst('##', '').trim(),
-            isMain: true,
-          ),
+          _buildHeading(cleanLine.replaceFirst('##', '').trim(), isMain: true),
         );
       } else if (trimmedLine.startsWith('#')) {
         // Sub heading
         widgets.add(
-          _buildHeading(
-            trimmedLine.replaceFirst('#', '').trim(),
-            isMain: false,
-          ),
+          _buildHeading(cleanLine.replaceFirst('#', '').trim(), isMain: false),
         );
       } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
         // Bold text
-        widgets.add(_buildBoldText(trimmedLine.replaceAll('**', '')));
+        widgets.add(_buildBoldText(cleanLine));
       } else if (trimmedLine.startsWith('*') && trimmedLine.endsWith('*')) {
         // Italic text
-        widgets.add(_buildItalicText(trimmedLine.replaceAll('*', '')));
+        widgets.add(_buildItalicText(cleanLine));
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
         // Bullet point
         widgets.add(
-          _buildBulletPoint(trimmedLine.replaceFirst(RegExp(r'^[•\-]\s*'), '')),
+          _buildBulletPoint(cleanLine.replaceFirst(RegExp(r'^[•\-]\s*'), '')),
         );
       } else if (trimmedLine.contains('**')) {
         // Mixed formatting within text
-        widgets.add(_buildMixedFormattedText(trimmedLine));
+        widgets.add(_buildMixedFormattedText(trimmedLine.replaceAll('*', '')));
       } else {
         // Regular text
-        widgets.add(_buildRegularText(trimmedLine));
+        widgets.add(_buildRegularText(cleanLine));
       }
 
       widgets.add(const SizedBox(height: 6));
@@ -348,7 +345,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: isMain ? 18 : 16,
           fontWeight: FontWeight.bold,
-          color: Colors.amber[900],
+          color: Colors.black,
           height: 1.3,
         ),
       ),
@@ -363,7 +360,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.amber[800],
+          color: Colors.black,
           height: 1.4,
         ),
       ),
@@ -378,7 +375,7 @@ class KeyInsightCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 14,
           fontStyle: FontStyle.italic,
-          color: Colors.amber[700],
+          color: Colors.black,
           height: 1.4,
         ),
       ),
@@ -404,11 +401,7 @@ class KeyInsightCard extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.amber[800],
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
             ),
           ),
         ],
@@ -427,11 +420,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
         break;
@@ -442,11 +431,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining.substring(0, boldStart),
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
       }
@@ -458,11 +443,7 @@ class KeyInsightCard extends StatelessWidget {
         spans.add(
           TextSpan(
             text: remaining.substring(boldStart),
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.amber[800],
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
           ),
         );
         break;
@@ -475,7 +456,7 @@ class KeyInsightCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.amber[900],
+            color: Colors.black,
             height: 1.4,
           ),
         ),
@@ -495,7 +476,7 @@ class KeyInsightCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text(
         text,
-        style: TextStyle(fontSize: 14, color: Colors.amber[800], height: 1.4),
+        style: TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
         softWrap: true,
       ),
     );
