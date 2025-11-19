@@ -86,7 +86,7 @@ class KeyInsightCard extends StatelessWidget {
                 Icon(Icons.lightbulb, color: Colors.amber[700], size: 24),
                 const SizedBox(width: 8),
                 const Text(
-                  'AI Key Insights',
+                  'Results',
                   style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
                 ),
               ],
