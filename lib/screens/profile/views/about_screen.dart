@@ -25,18 +25,20 @@ class AboutScreen extends StatelessWidget {
             const ListTile(
               leading: Icon(Icons.developer_mode_outlined),
               title: Text('Developed by'),
-              subtitle: Text('centmarde'),
+              subtitle: Text('Roy A. Bayotlang, Greg Carl Calo'),
             ),
             const ListTile(
               leading: Icon(Icons.copyright_outlined),
               title: Text('Copyright'),
-              subtitle: Text('© 2025 centmarde. All rights reserved.'),
+              subtitle: Text(
+                '© 2025 Roy A. Bayotlang, Greg Carl Calo. All rights reserved.',
+              ),
             ),
             const ListTile(
               leading: Icon(Icons.description_outlined),
               title: Text('Description'),
               subtitle: Text(
-                'Terra Price Mobile is a Flutter app for managing your profile, settings, and more.',
+                'Terra Price Mobile lets you analyze property images using AI, detect and count rooms and features, generate property reports, and store your analysis history securely in the cloud.',
               ),
             ),
           ],
