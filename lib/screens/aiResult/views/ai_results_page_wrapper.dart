@@ -48,14 +48,6 @@ class AIResultsPageWrapper extends StatelessWidget {
     };
   }
 
-  String? _getConfidenceScore() {
-    if (analysisData['confidence_score'] != null) {
-      int confidence = _safeToInt(analysisData['confidence_score']);
-      return confidence.toString();
-    }
-    return null;
-  }
-
   Map<String, dynamic>? _getDetailedCounts() {
     return {
       'rooms': _safeToInt(analysisData['rooms']),
@@ -105,7 +97,6 @@ class AIResultsPageWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final propertyMetrics = _getPropertyMetrics();
-    final confidenceScore = _getConfidenceScore();
     final detailedCounts = _getDetailedCounts();
     final insights = _getInsights();
     final fileName =
@@ -167,9 +158,9 @@ class AIResultsPageWrapper extends StatelessWidget {
             doors: propertyMetrics['doors']!,
             windows: propertyMetrics['windows']!,
             furnitures: propertyMetrics['furnitures']!,
-            confidence: confidenceScore,
             isLoading: false,
             detailedCounts: detailedCounts,
+            onRefresh: null, // No refresh for historical data
           ),
           const SizedBox(height: 24),
 
@@ -193,11 +184,10 @@ class AIResultsPageWrapper extends StatelessWidget {
           DownloadReportCard(
             price:
                 '\$500,000', // Could be extracted from AI response if available
-            confidence: confidenceScore != null ? '$confidenceScore%' : '92%',
+            confidence: '92%',
             propertyMetrics: propertyMetrics,
             insights: insights,
             roboflowImageData: null,
-            confidenceScore: confidenceScore,
             detailedCounts: detailedCounts,
             capturedImage: null,
             supabaseData: analysisData,

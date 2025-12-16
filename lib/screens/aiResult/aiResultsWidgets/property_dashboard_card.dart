@@ -1,47 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Skeleton loader for confidence section
-class _ConfidenceSkeleton extends StatelessWidget {
-  const _ConfidenceSkeleton();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 32,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green[100],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.green[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(width: 80, height: 16, color: Colors.green[200]),
-        ],
-      ),
-    );
-  }
-}
-
 class PropertyDashboardCard extends StatelessWidget {
   final String size;
   final String rooms;
   final String doors;
   final String windows;
   final String furnitures;
-  final String? confidence;
   final bool isLoading;
   final Map<String, dynamic>? detailedCounts;
+  final VoidCallback? onRefresh;
 
   const PropertyDashboardCard({
     super.key,
@@ -50,9 +18,9 @@ class PropertyDashboardCard extends StatelessWidget {
     required this.doors,
     required this.windows,
     required this.furnitures,
-    this.confidence,
     this.isLoading = false,
     this.detailedCounts,
+    this.onRefresh,
   });
 
   @override
@@ -75,8 +43,21 @@ class PropertyDashboardCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (onRefresh != null) ...[
+                  IconButton(
+                    onPressed: isLoading ? null : onRefresh,
+                    icon: Icon(
+                      Icons.refresh,
+                      color: isLoading ? Colors.grey[400] : Colors.green[700],
+                      size: 20,
+                    ),
+                    tooltip: 'Refresh latest data',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 if (isLoading) ...[
-                  const SizedBox(width: 8),
                   SizedBox(
                     width: 16,
                     height: 16,
@@ -140,41 +121,6 @@ class PropertyDashboardCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Confidence score if available
-            if (isLoading) ...[
-              const SizedBox(height: 16),
-              const _ConfidenceSkeleton(),
-            ] else if (confidence != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green[200]!, width: 1),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.psychology, color: Colors.green[700], size: 20),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'AI Confidence: ${PropertyDashboardCard.addAndClampConfidence(confidence)}%',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green[700],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
 
             const SizedBox(height: 8),
 
@@ -310,28 +256,16 @@ class PropertyDashboardCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _DetailedAnalysisModal(
-        detailedCounts: detailedCounts,
-        confidence: confidence,
-      ),
+      builder: (context) =>
+          _DetailedAnalysisModal(detailedCounts: detailedCounts),
     );
-  }
-
-  static String addAndClampConfidence(String? confidence) {
-    if (confidence == null) return '30';
-    final num? value = num.tryParse(confidence);
-    if (value == null) return '30';
-    final num result = value + 30;
-    if (result > 99) return '99';
-    return result.toStringAsFixed(0);
   }
 }
 
 class _DetailedAnalysisModal extends StatelessWidget {
   final Map<String, dynamic>? detailedCounts;
-  final String? confidence;
 
-  const _DetailedAnalysisModal({required this.detailedCounts, this.confidence});
+  const _DetailedAnalysisModal({required this.detailedCounts});
 
   @override
   Widget build(BuildContext context) {
@@ -396,48 +330,6 @@ class _DetailedAnalysisModal extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // Confidence Score Section
-                  if (confidence != null) ...[
-                    _buildSectionHeader('AI Analysis Confidence'),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.green[50]!, Colors.green[100]!],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green[200]!, width: 1),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            color: Colors.green[700],
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Flexible(
-                            child: Text(
-                              '${PropertyDashboardCard.addAndClampConfidence(confidence)}% Confidence',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
 
                   // Room Analysis Section
                   _buildSectionHeader('Space Analysis'),

@@ -30,7 +30,6 @@ class AIResultsService {
               .from('mobile_uploads')
               .select()
               .eq('user_id', userId)
-              .inFilter('status', ['processed', 'approved'])
               .order('analyzed_at', ascending: false)
               .limit(1)
               .maybeSingle();

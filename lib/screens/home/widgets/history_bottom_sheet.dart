@@ -238,6 +238,56 @@ class _HistoryBottomSheetState extends State<HistoryBottomSheet> {
                                   ),
                                 ),
                               ],
+                              // Show denial reason when status is denied
+                              if (status.toLowerCase() == 'denied' &&
+                                  upload['comments'] != null &&
+                                  upload['comments'].toString().isNotEmpty) ...[
+                                SizedBox(height: 8.h),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(12.w),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.05),
+                                    border: Border.all(
+                                      color: Colors.red.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            size: 14.sp,
+                                            color: Colors.red,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Text(
+                                            'Denial Reason:',
+                                            style: TextStyle(
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 4.h),
+                                      Text(
+                                        upload['comments'].toString(),
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: Colors.red.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               SizedBox(height: 8.h),
                               Row(
                                 mainAxisAlignment:
@@ -307,6 +357,10 @@ class _HistoryBottomSheetState extends State<HistoryBottomSheet> {
       case 'pending':
         backgroundColor = Colors.orange.withOpacity(0.1);
         textColor = Colors.orange;
+        break;
+      case 'denied':
+        backgroundColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red;
         break;
       default:
         backgroundColor = Theme.of(

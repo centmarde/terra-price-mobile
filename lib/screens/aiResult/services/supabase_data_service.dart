@@ -108,66 +108,18 @@ class SupabaseDataService {
         );
       }
 
-      // Now get the latest completed record (processed or approved)
+      // Now get the latest approved record (using new status system)
       final response = await _supabase
           .from('mobile_uploads')
           .select('*')
           .eq('user_id', userId)
-          .inFilter('status', ['processed', 'approved'])
           .order('analyzed_at', ascending: false)
           .order('created_at', ascending: false) // Fallback sort
           .limit(1);
 
       if (response.isEmpty) {
-        developer.log(
-          '⚠️ No completed analysis data found for user (processed/approved)',
-        );
-
-        // Try getting the latest record regardless of status
-        final anyStatusResponse = await _supabase
-            .from('mobile_uploads')
-            .select('*')
-            .eq('user_id', userId)
-            .order('analyzed_at', ascending: false)
-            .order('created_at', ascending: false)
-            .limit(1);
-
-        if (anyStatusResponse.isNotEmpty) {
-          final latestRecord = anyStatusResponse.first;
-          developer.log(
-            '🔍 Found latest record with status: ${latestRecord['status']}',
-          );
-          developer.log(
-            '🔍 Latest record details: id=${latestRecord['id']}, name=${latestRecord['file_name']}',
-          );
-
-          // Return this record even if it's not processed/approved
-          // Convert numeric values to ensure proper types
-          final processedData = <String, dynamic>{
-            ...latestRecord,
-            'doors': _safeToInt(latestRecord['doors']),
-            'rooms': _safeToInt(latestRecord['rooms']),
-            'window': _safeToInt(latestRecord['window']),
-            'sofa': _safeToInt(latestRecord['sofa']),
-            'large_sofa': _safeToInt(latestRecord['large_sofa']),
-            'sink': _safeToInt(latestRecord['sink']),
-            'large_sink': _safeToInt(latestRecord['large_sink']),
-            'twin_sink': _safeToInt(latestRecord['twin_sink']),
-            'tub': _safeToInt(latestRecord['tub']),
-            'coffee_table': _safeToInt(latestRecord['coffee_table']),
-            'total_detections': _safeToInt(latestRecord['total_detections']),
-            'confidence_score': _safeToInt(latestRecord['confidence_score']),
-            'file_size': _safeToInt(latestRecord['file_size']),
-          };
-
-          developer.log(
-            '✅ Using latest record regardless of status: ${processedData['file_name']}',
-          );
-          return processedData;
-        } else {
-          developer.log('⚠️ No records found at all for user');
-        }
-
+        developer.log('⚠️ No approved analysis data found for user');
+        developer.log('💡 Upload a new image to get approved analysis results');
         return null;
       }
 
@@ -231,12 +183,10 @@ class SupabaseDataService {
           .from('mobile_uploads')
           .select('*')
           .eq('user_id', userId)
-          .inFilter('status', ['processed', 'approved'])
+          .eq('status', 'approved') // Only approved records in new system
           .order('analyzed_at', ascending: false);
 
-      developer.log(
-        '✅ Found ${response.length} analysis records (processed/approved)',
-      );
+      developer.log('✅ Found ${response.length} approved analysis records');
 
       // Process each record to ensure proper types
       final processedData = response.map<Map<String, dynamic>>((record) {
@@ -297,7 +247,7 @@ class SupabaseDataService {
             'doors, rooms, window, sofa, large_sofa, sink, large_sink, twin_sink, tub, coffee_table, total_detections, confidence_score',
           )
           .eq('user_id', userId)
-          .inFilter('status', ['processed', 'approved']);
+          .eq('status', 'approved'); // Only approved records in new system
 
       if (response.isEmpty) {
         return {

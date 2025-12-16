@@ -162,13 +162,62 @@ class ImageUploadService {
             'No AI analysis available - neither response nor original image provided';
       }
 
+      // Determine status based on confidence score
+      final confidenceScore = objectCounts['confidence_score'] ?? 0;
+      String status;
+      String? comments;
+
+      if (confidenceScore < 60) {
+        status = 'denied';
+
+        // Generate LLM comment for rejection
+        try {
+          print('🤖 Generating rejection comment with LLM...');
+          final commentResponse = await GroqAIService.chatCompletion(
+            messages: [
+              GroqMessage(
+                role: 'system',
+                content:
+                    'You are an AI assistant that explains why a floor plan analysis was rejected due to low confidence. Keep it brief, professional, and helpful.',
+              ),
+              GroqMessage(
+                role: 'user',
+                content:
+                    'The floor plan analysis was rejected because the confidence score is $confidenceScore% (below the 52% threshold). Generate a brief, helpful comment explaining this rejection to the user. Include suggestions for improving the image quality if possible.',
+              ),
+            ],
+            maxTokens: 200,
+            temperature: 0.7,
+          );
+
+          if (commentResponse.choices.isNotEmpty) {
+            comments = commentResponse.choices.first.message.content;
+            print('✅ Generated rejection comment: $comments');
+          } else {
+            comments =
+                'Analysis rejected due to low confidence score ($confidenceScore%). Please ensure the floor plan image is clear and properly lit.';
+          }
+        } catch (e) {
+          print('❌ Failed to generate LLM comment: $e');
+          comments =
+              'Analysis rejected due to low confidence score ($confidenceScore%). Please try uploading a clearer image of the floor plan.';
+        }
+      } else {
+        status = 'approved';
+        comments = null; // No comments needed for approved items
+      }
+
+      print(
+        '📊 Analysis result - Confidence: $confidenceScore%, Status: $status',
+      );
+
       // Prepare the insert data with object counts and AI response
       final insertData = {
         'user_id': userId,
         'file_name': fileName,
         'file_path': fullUrl,
         'file_size': 0, // Size not available for processed images
-        'status': 'processed',
+        'status': status, // Use confidence-based status
         'roboflow_data': roboflowData, // jsonB Store the full analysis data
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -189,6 +238,7 @@ class ImageUploadService {
         'total_detections': objectCounts['total_detections'],
         'confidence_score': objectCounts['confidence_score'],
         'ai_response': finalAiResponse, // Store AI response from Groq AI
+        'comments': comments, // Store LLM-generated comment for rejections
       };
 
       // Insert metadata record for the last processed image
