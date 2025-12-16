@@ -36,7 +36,6 @@ class _AIResultsPageState extends State<AIResultsPage>
   // AI Response data
   String? aiResponse;
   String? extractedCost;
-  String? extractedConfidence;
 
   // Timer for checking analysis status
   Timer? _analysisStatusTimer;
@@ -130,7 +129,6 @@ class _AIResultsPageState extends State<AIResultsPage>
         roboflowData = null;
         aiResponse = null;
         extractedCost = null;
-        extractedConfidence = null;
         aiGeneratedImageUrl = null;
         isLoading = true;
         isDashboardLoading = true;
@@ -335,15 +333,13 @@ class _AIResultsPageState extends State<AIResultsPage>
         final response = latestData['ai_response'] as String?;
 
         if (response != null && response.isNotEmpty) {
-          // Extract cost and confidence from the AI response
+          // Extract cost from the AI response
           final cost = AIResponseParser.extractTotalCost(response);
-          final confidence = AIResponseParser.extractConfidence(response);
 
           if (mounted && !_isDisposed) {
             setState(() {
               aiResponse = response;
               extractedCost = cost;
-              extractedConfidence = confidence;
             });
           }
 
@@ -352,14 +348,12 @@ class _AIResultsPageState extends State<AIResultsPage>
             '📝 Full AI response: ${response.substring(0, response.length > 200 ? 200 : response.length)}...',
           );
           print('💰 Extracted cost: $cost');
-          print('📊 Extracted confidence: $confidence');
         } else {
           print('⚠️ No AI response found in latest analysis data');
           if (mounted && !_isDisposed) {
             setState(() {
               aiResponse = null;
               extractedCost = null;
-              extractedConfidence = null;
             });
           }
         }
@@ -369,7 +363,6 @@ class _AIResultsPageState extends State<AIResultsPage>
           setState(() {
             aiResponse = null;
             extractedCost = null;
-            extractedConfidence = null;
           });
         }
       }
@@ -379,7 +372,6 @@ class _AIResultsPageState extends State<AIResultsPage>
         setState(() {
           aiResponse = null;
           extractedCost = null;
-          extractedConfidence = null;
         });
       }
     }
@@ -441,14 +433,6 @@ class _AIResultsPageState extends State<AIResultsPage>
     final defaultMetrics = RoboflowDataParser.extractPropertyMetrics({});
     defaultMetrics['windows'] = '0';
     return defaultMetrics;
-  }
-
-  String? _getConfidenceScore() {
-    if (supabaseData != null && supabaseData!['confidence_score'] != null) {
-      int confidence = _safeToInt(supabaseData!['confidence_score']);
-      return confidence.toString();
-    }
-    return null;
   }
 
   Map<String, dynamic>? _getDetailedCounts() {
@@ -571,7 +555,6 @@ class _AIResultsPageState extends State<AIResultsPage>
         : RoboflowDataParser.extractInsights({});
 
     final propertyMetrics = _getPropertyMetrics();
-    final confidenceScore = _getConfidenceScore();
     final detailedCounts = _getDetailedCounts();
 
     final labelImageData = roboflowData != null
@@ -646,9 +629,9 @@ class _AIResultsPageState extends State<AIResultsPage>
             doors: propertyMetrics['doors']!,
             windows: propertyMetrics['windows']!,
             furnitures: propertyMetrics['furnitures']!,
-            confidence: confidenceScore,
             isLoading: isDashboardLoading,
             detailedCounts: detailedCounts,
+            onRefresh: _forceRefreshData,
           ),
           const SizedBox(height: 24),
 
@@ -672,7 +655,7 @@ class _AIResultsPageState extends State<AIResultsPage>
           DownloadReportCard(
             // Real price and confidence data
             price: '\$500,000',
-            confidence: confidenceScore != null ? '$confidenceScore%' : '92%',
+            confidence: '92%',
 
             // Real property metrics from analysis
             propertyMetrics: propertyMetrics,
@@ -682,9 +665,6 @@ class _AIResultsPageState extends State<AIResultsPage>
 
             // Real AI visualization image
             roboflowImageData: labelImageData,
-
-            // Real confidence score
-            confidenceScore: confidenceScore,
 
             // Real detailed object counts
             detailedCounts: detailedCounts,

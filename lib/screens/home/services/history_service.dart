@@ -7,6 +7,12 @@ class HistoryService {
   /// Fetches all mobile upload records with analysis data for the current user
   Future<List<Map<String, dynamic>>> getMobileUploads() async {
     try {
+      // Get current user ID for filtering
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
       final response = await _supabase
           .from('mobile_uploads')
           .select('''
@@ -26,12 +32,24 @@ class HistoryService {
             confidence_score,
             ai_response,
             file_path,
-            analyzed_at
+            analyzed_at,
+            comments,
+            user_id,
+            total_detections
           ''')
+          .eq('user_id', userId) // Filter by current user
           .order('created_at', ascending: false);
 
-      return List<Map<String, dynamic>>.from(response);
+      final List<Map<String, dynamic>> results =
+          List<Map<String, dynamic>>.from(response);
+
+      print(
+        '📋 Fetched ${results.length} mobile upload records for user: $userId',
+      );
+
+      return results;
     } catch (e) {
+      print('❌ Error fetching mobile uploads: $e');
       throw Exception('Failed to fetch upload history: $e');
     }
   }
